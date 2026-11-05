@@ -75,7 +75,8 @@ use_wandb:
 example:
   type: bool
   help: Include the worked example domain (delete it once your first real family exists)?
-  default: true
+  # Only projects made before 1.0.0 carry a `profile` answer, so updating one leaves the example out.
+  default: "{{ profile is not defined }}"
 
 # Where the two dependencies come from: TOML inline tables for [tool.uv.sources].
 # Never asked; the template's tests pass `{ path = "..." }` to test local checkouts.

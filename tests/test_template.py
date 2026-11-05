@@ -233,24 +233,44 @@ def commit(repo: Path, message: str) -> None:
     sh(repo, "git", "commit", "-q", "--allow-empty", "-m", message)
 
 
-def test_update_across_1_0_0_removes_formerly_vendored_files(releases, tmp_path):
-    project = tmp_path / "old"
-    render(releases, project, vcs_ref="v0.9.0")
-    for path in VENDORED:
-        (project / path).parent.mkdir(parents=True, exist_ok=True)
-        (project / path).write_text("# Copied in before 1.0.0.\n", encoding="utf-8")
-    commit(project, "chore: start project")
-
+def update(project: Path, **data: object) -> None:
+    """Update the project to the latest release, v1.0.0, as `copier update` would."""
     run_update(
-        project,
-        vcs_ref="v1.0.0",
-        defaults=True,
-        overwrite=True,
-        unsafe=True,
-        quiet=True,
+        project, data=data, defaults=True, overwrite=True, unsafe=True, quiet=True
     )
 
+
+def made_before_1_0_0(releases: Path, dst: Path) -> Path:
+    """Render a project as releases before 1.0.0 left it: copies, a profile answer."""
+    render(releases, dst, vcs_ref="v0.9.0", example=False)
+    answers_file = dst / ".copier-answers.yml"
+    answers = yaml.safe_load(answers_file.read_text(encoding="utf-8"))
+    del answers["example"]
+    answers["profile"] = "rnd"
+    answers_file.write_text(yaml.safe_dump(answers), encoding="utf-8")
+    for path in VENDORED:
+        (dst / path).parent.mkdir(parents=True, exist_ok=True)
+        (dst / path).write_text("# Copied in before 1.0.0.\n", encoding="utf-8")
+    commit(dst, "chore: start project")
+    return dst
+
+
+def test_update_across_1_0_0_removes_formerly_vendored_files(releases, tmp_path):
+    project = made_before_1_0_0(releases, tmp_path / "old")
+
+    update(project)
+
     assert [path for path in VENDORED if (project / path).exists()] == []
+
+
+def test_update_across_1_0_0_leaves_example_out_of_existing_project(releases, tmp_path):
+    project = made_before_1_0_0(releases, tmp_path / "old")
+
+    update(project)
+
+    answers = yaml.safe_load((project / ".copier-answers.yml").read_text("utf-8"))
+    present = [path for path in EXAMPLE if (project / path).exists()]
+    assert (answers["example"], present) == (False, [])
 
 
 def test_update_without_example_removes_example_domain(releases, tmp_path):
@@ -258,14 +278,7 @@ def test_update_without_example_removes_example_domain(releases, tmp_path):
     render(releases, project)
     commit(project, "chore: start project")
 
-    run_update(
-        project,
-        data={"example": False},
-        defaults=True,
-        overwrite=True,
-        unsafe=True,
-        quiet=True,
-    )
+    update(project, example=False)
 
     config = (project / "src" / "demo" / "config.py").read_text(encoding="utf-8")
     assert ([p for p in EXAMPLE if (project / p).exists()], "signal" in config) == (

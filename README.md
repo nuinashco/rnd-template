@@ -36,9 +36,8 @@ uvx copier update --trust
 Copier merges template changes with local edits and marks conflicts inline, between `<<<<<<< before updating` and
 `>>>>>>> after updating`. `--trust` lets the template's migrations run: updating across 1.0.0 deletes the copies that
 earlier versions put in each project (`src/nuikit/`, `tests/nuikit/`, `CONVENTIONS.md`, `.claude/agents/`), since
-nuikit is now a dependency and the conventions arrive through the plugins. Updating from before 1.0.0 also asks the
-new `example` question; answer no (`--data example=false`) unless you want the example domain added to an existing
-project. Then run `uv sync` and `make check`.
+nuikit is now a dependency and the conventions arrive through the plugins. For those projects the new `example`
+question defaults to no, so the update adds no example domain to them. Then run `uv sync` and `make check`.
 
 ## What lives where
 
