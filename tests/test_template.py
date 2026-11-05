@@ -41,7 +41,13 @@ TEMPLATE_RULES = {
     *("LAY-4", "LAY-7", "ENV-1", "ENV-2", "ENV-3", "TST-5", "TOOL-3"),
     *(f"RUN-{n}" for n in range(3, 8)),
 }
-EXAMPLE = ["src/demo/signals", "src/demo/stats", "tests/demo/signals", "configs/signal"]
+EXAMPLE = [
+    "src/demo/signals",
+    "src/demo/stats",
+    "tests/demo/signals",
+    "tests/demo/stats",
+    "configs/signal",
+]
 HEADING = re.compile(r"^### ([A-Z]+-\d+) (?:MUST|SHOULD|MAY)(?: \[rnd\])?$", re.M)
 
 
