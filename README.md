@@ -48,7 +48,7 @@ question defaults to no, so the update adds no example domain to them. Then run 
 |---|---|---|
 | this one | the template in `template/`, its questions and migrations in `copier.yml` | LAY-4, LAY-7, ENV-1 to ENV-3, TST-5, RUN-3 to RUN-7, TOOL-3 |
 | [nuinashco/nuikit](https://github.com/nuinashco/nuikit) | the library projects depend on (config schemas, generated YAML, families, errors, logging, runs, seeding) and its `nuikit` Claude Code plugin; [docs/guide.md](https://github.com/nuinashco/nuikit/blob/main/docs/guide.md) | FAM, CFG, ERR-1, ERR-2, LOG-1, LOG-3, RUN-1, RUN-2 |
-| [nuinashco/conventions](https://github.com/nuinashco/conventions) | the rules for every repo ([GUIDE.md](https://github.com/nuinashco/conventions/blob/main/GUIDE.md)), the `conventions-hooks` checks, the `conventions` plugin and the `nuinashco` marketplace | LAY-1 to LAY-3, LAY-5, LAY-6, ARC, TYP, STY, DOC, ERR-3 to ERR-6, LOG-2, LOG-4, LOG-5, TST, RDOC, GIT, TOOL |
+| [nuinashco/conventions](https://github.com/nuinashco/conventions) | the rules for every repo ([GUIDE.md](https://github.com/nuinashco/conventions/blob/main/GUIDE.md)), the `conventions-hooks` checks, the `conventions` plugin and the `nuinashco` marketplace | LAY-1 to LAY-3, LAY-5, LAY-6, ARC, TYP, STY, DOC, ERR-3 to ERR-6, LOG-2, LOG-4, LOG-5, TST-1 to TST-4, TST-6 to TST-8, RDOC, GIT, TOOL-1, TOOL-2, TOOL-4 to TOOL-6 |
 
 This template's own rules ship with every project as path-scoped Claude Code rules, which Claude loads when it works
 on the files they cover: [layout.md](template/.claude/rules/layout.md.jinja) (LAY-4, LAY-7, ENV-1 to ENV-3, TOOL-3
