@@ -8,7 +8,7 @@ ENV-3, TST-5, RUN-3 to RUN-7 and TOOL-3, written in `template/.claude/rules/`.
 ## Commands
 
 ```bash
-make lint     # ruff on tests/
+make lint     # ruff, check-comments and check-conventions on tests/
 NUIKIT_PATH=../nuikit CONVENTIONS_PATH=../conventions make test
               # render every variant, run its make check, commands and hooks; update across 1.0.0
 ```
@@ -39,5 +39,6 @@ README.md         starting and updating a project, what lives in the other repos
   one, and a final `*Check:*` paragraph. Keep IDs; never reuse a retired one. Keep them short: Claude loads them.
 - `copier update` must keep working on existing projects: no renamed questions, and a migration for every file a
   release stops shipping. Releases are tags `vMAJOR.MINOR.PATCH`.
-- Change nuikit or the conventions in their own repos; this one only pins their release tags.
+- Change nuikit or the conventions in their own repos; this one only pins their release tags, in `copier.yml`
+  and, for `make lint`, the conventions tag in the `Makefile`.
 - Commits are one line, Conventional Commits, lowercase imperative subject, no articles, no body (GIT-1, GIT-2).
