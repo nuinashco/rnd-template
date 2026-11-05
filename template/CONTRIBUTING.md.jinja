@@ -210,7 +210,8 @@ uvx copier update --trust --defaults --data example=false
 ```
 
 Copier deletes the example's files and takes its lines out of `config.py`, `cli/run.py`, `configs/run.yaml`, the
-import layers and these docs; resolve any conflicts it leaves (`*.rej`), then `make configs` and `make check`.
+import layers and these docs. It marks conflicts inline, between `<<<<<<< before updating` and
+`>>>>>>> after updating`; resolve them, then run `make configs` and `make check`.
 {% endif %}
 
 ## Tests
