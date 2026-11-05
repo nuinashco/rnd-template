@@ -17,7 +17,8 @@ every repo come with the `conventions` plugin ([nuinashco/conventions](https://g
 FAM, CFG, ERR-1, ERR-2, LOG-1, LOG-3, RUN-1 and RUN-2 with the `nuikit` plugin
 ([nuinashco/nuikit](https://github.com/nuinashco/nuikit/blob/main/docs/guide.md)).
 
-This project's import layers (ARC-1), top to bottom, as the exhaustive contract in `pyproject.toml` declares them:
+This project's import layers (ARC-1) are the `layers` of the exhaustive `[[tool.importlinter.contracts]]` in
+`pyproject.toml`, top to bottom; read them there, since they grow with the project. At generation they were
 {% if example %}
 `cli` > `config` > `signals | stats` > `paths`. Siblings joined by `|` never import each other. A new domain goes
 between `config` and `paths`, as a sibling or in a layer of its own above the domains it imports.
