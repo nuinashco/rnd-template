@@ -3,7 +3,9 @@
 #   uvx copier copy --trust gh:nuinashco/rnd-template my-project
 #   uvx copier update --trust                  # inside a generated project
 #
-# The project's files live in template/. `--trust` lets the migrations below run.
+# The project's files live in template/. `--trust` lets the migrations below run. A project made
+# before 1.0.0 first sets `_src_path: gh:nuinashco/rnd-template` in its .copier-answers.yml, which
+# still names nuinashco/conventions (README.md, "Update a project").
 
 _min_copier_version: "9.4.0"
 _subdirectory: template

@@ -26,8 +26,11 @@ machine, the marketplace that holds them may need adding first: `/plugin marketp
 
 ## Update a project
 
-Generated projects record the template version in `.copier-answers.yml`. From the project root, with a clean working
-tree:
+Generated projects record the template and its version in `.copier-answers.yml`. A project made before 1.0.0 names
+nuinashco/conventions there (or a local clone of it), which no longer holds the template. Once, by hand (the file is
+protected, so Claude's hooks refuse the edit), set `_src_path: gh:nuinashco/rnd-template` in it and commit: this repo
+keeps the old release tags, so copier finds the version the project was made from. Then, from the project root, with a
+clean working tree:
 
 ```bash
 uvx copier update --trust
