@@ -1,93 +1,90 @@
-# conventions
+# rnd-template
 
-My conventions for Python and ML projects, and the copier templates that implement them.
-
-- [GUIDE.md](GUIDE.md): the rules (MUST/SHOULD/MAY, each with a reason and a check), the decisions behind them, and
-  sources.
-- `templates/rnd`: research and development projects. These are tools, pipelines and training code, built as one
-  package with Hydra + pydantic configs, families of items, run directories, structlog, attrs, pyright and
-  import-linter.
-- `templates/uni`: course workspaces. A uv workspace with a shared course package, one member per lab, and LaTeX
-  reports built from generated macros.
-- `templates/lab`: one lab inside a uni workspace, created with `make lab` there.
-
-## Hooks
-
-The repo is also the `conventions-hooks` package (`src/conventions_hooks/`), the checks this guide adds on top of ruff:
-
-| command | checks | runs |
-|---|---|---|
-| `check-comments` | comments are sentences, no section banners, class docstrings are noun phrases (DOC-2, DOC-4, DOC-5) | pre-commit on every commit; Claude Code `PostToolUse` hook after each edit |
-| `review-comments` | new comments, docstrings and `Field` descriptions say only what the code cannot (DOC-2 to DOC-7), judged by `claude -p` with a structured verdict | Claude Code `Stop` hook; `pre-commit run review-comments --hook-stage manual` |
-| `check-protected` | files `.gitattributes` marks `protected` (generated, vendored, published) are not edited by hand (TOOL-5) | Claude Code `PreToolUse` hook before each edit |
-
-Generated projects install it as a dev dependency pinned to the template's commit (a local path until this repo is
-pushed) and wire both layers. Repos that don't use uv can use `.pre-commit-hooks.yaml` instead.
-
-Projects also get two read-only subagents in `.claude/agents/`: `conventions-reviewer` checks a branch or the repo
-against the guide, and `descriptions-judge` checks each config description and YAML comment against DOC-7 and the code.
-
-`review-comments` and both subagents are LLM judges (TOOL-6). `tests/judges/` holds their labelled cases: diffs that
-must pass or fail, and projects with planted mistakes. Rerun them after changing a judge's prompt or the model, and
-add each mistake a judge makes as a new case.
-
-```bash
-make test             # unit tests of the hooks, under a second
-make test-templates   # render every profile and run its checks (slow, needs network)
-make test-judges      # the judges on their labelled cases (live `claude` calls: minutes, about $3)
-```
+A [copier](https://copier.readthedocs.io/) template for research and development projects: tools, pipelines and
+training code, built as one package on [nuikit](https://github.com/nuinashco/nuikit), with Hydra + pydantic configs,
+families of items, run directories, structlog, attrs, pyright and import-linter. A new project starts opted in to the
+[nuinashco conventions](https://github.com/nuinashco/conventions): their checks run in pre-commit and CI, and their
+Claude Code plugins are enabled in `.claude/settings.json`.
 
 ## Start a project
 
 ```bash
-uvx copier copy --data profile=rnd ~/Projects/Personal/conventions my-project
+uvx copier copy --trust gh:nuinashco/rnd-template my-project
 cd my-project
 git init && make setup    # uv sync + pre-commit and commit-msg hooks
-make github               # once the GitHub repo exists: squash-merge settings (GIT-3)
 make check                # ruff, import contracts, pyright, pytest
+make github               # once the GitHub repo exists: squash-merge settings (GIT-3)
 ```
 
-```bash
-uvx copier copy --data profile=uni ~/Projects/Personal/conventions iasa-course
-cd iasa-course
-git init && make setup
-make lab N=001 TOPIC=genetic
-```
+Copier asks for the project name, the import package, the minimum Python (default 3.14), whether runs can mirror to
+Weights & Biases, and whether to include the example domain; `--defaults` accepts every default. The example is a
+small `signals` family and a `stats` domain wired into `<cli>-run`: it shows each pattern once, and new code copies its
+shape. Its CONTRIBUTING.md says how to drop it once the first real family exists.
 
-Copier asks for the remaining answers: the project name, the Python version (default 3.14), and W&B for rnd or the
-title-page fields for uni. Pass `--defaults` to accept them all.
+In Claude Code, trust the project folder and install the `conventions` and `nuikit` plugins it offers. Once per
+machine, the marketplace that holds them may need adding first: `/plugin marketplace add nuinashco/conventions`.
 
 ## Update a project
 
-Generated projects record the template version in `.copier-answers.yml`. Updating needs a tagged template commit:
+Generated projects record the template version in `.copier-answers.yml`. From the project root, with a clean working
+tree:
 
 ```bash
-copier update             # from the project root, with a clean working tree
+uvx copier update --trust
 ```
 
-Copier merges template changes with local edits and leaves conflicts as `.rej` files.
+Copier merges template changes with local edits and leaves conflicts as `.rej` files. `--trust` lets the template's
+migrations run: updating across 1.0.0 deletes the copies that earlier versions put in each project (`src/nuikit/`,
+`tests/nuikit/`, `CONVENTIONS.md`, `.claude/agents/`), since nuikit is now a dependency and the conventions arrive
+through the plugins. Updating from before 1.0.0 also asks the new `example` question; answer no (`--data example=false`)
+unless you want the example domain added to an existing project. Then run `uv sync` and `make check`.
 
-## Adopt the guide in an existing repo
+## What lives where
 
-1. Read the [quick reference](GUIDE.md#quick-reference) and list what the repo does differently under "Deviations"
-   in its CONTRIBUTING.md.
-2. Port the mechanical parts first, by rendering the template into a scratch directory and diffing:
-   - pyproject tool blocks (ruff, pyright, pytest, import-linter);
-   - `.pre-commit-config.yaml`, the Makefile and CI.
-3. Then copy `src/nuikit/` and `tests/nuikit/` from the render, move the repo's paths into `<pkg>/paths.py`, and
-   switch imports to `nuikit` one module at a time.
-4. Then refactor rule by rule (attrs classes, generated configs, structlog events), one conventional commit per rule,
-   citing its ID.
+| repo | holds | rule IDs |
+|---|---|---|
+| this one | the template in `template/`, its questions and migrations in `copier.yml` | LAY-4, LAY-7, ENV-1 to ENV-3, TST-5, RUN-3 to RUN-7, TOOL-3 |
+| [nuinashco/nuikit](https://github.com/nuinashco/nuikit) | the library projects depend on (config schemas, generated YAML, families, errors, logging, runs, seeding) and its `nuikit` Claude Code plugin; [docs/guide.md](https://github.com/nuinashco/nuikit/blob/main/docs/guide.md) | FAM, CFG, ERR-1, ERR-2, LOG-1, LOG-3, RUN-1, RUN-2 |
+| [nuinashco/conventions](https://github.com/nuinashco/conventions) | the rules for every repo ([GUIDE.md](https://github.com/nuinashco/conventions/blob/main/GUIDE.md)), the `conventions-hooks` checks, the `conventions` plugin and the `nuinashco` marketplace | LAY-1 to LAY-3, LAY-5, LAY-6, ARC, TYP, STY, DOC, ERR-3 to ERR-6, LOG-2, LOG-4, LOG-5, TST, RDOC, GIT, TOOL |
 
-## Change a rule
+This template's own rules ship with every project as path-scoped Claude Code rules, which Claude loads when it works
+on the files they cover: [layout.md](template/.claude/rules/layout.md.jinja) (LAY-4, LAY-7, ENV-1 to ENV-3, TOOL-3
+and the project's import layers), [runs.md](template/.claude/rules/runs.md.jinja) (RUN-3 to RUN-7) and
+[tests.md](template/.claude/rules/tests.md) (TST-5). They have the same shape as the other repos' rules: a
+`### <ID> <LEVEL>` heading, the rule, a *Why* where there is one, and a final *Check*.
 
-1. Edit the rule in `GUIDE.md`, keeping its ID, and update every template it affects.
-2. Run `make test-templates`. It renders every profile and runs each one's own `make check`; it takes about 30 s and
-   needs network for `uv sync`.
-3. Commit, then tag `vMAJOR.MINOR.PATCH` so projects can `copier update`.
+`[tool.uv.sources]` pins both dependencies to release tags, `nuikit` and `conventions-hooks` at `v0.1.0`; a template
+release that moves a pin reaches projects with `copier update`.
+
+## Decisions
+
+The choices behind the project layout; those behind the library and the general rules are in the other two repos.
+
+| topic | decision | alternatives | why |
+|---|---|---|---|
+| shared machinery | `nuikit`, a dependency pinned to a tag | copied into every project by the template (before 1.0.0) | one source with its own tests and releases; a fix reaches a project as a pin change, and no copy drifts |
+| rules in a project | path-scoped `.claude/rules/` for the template's rules, plugins for the rest | a vendored copy of the whole guide | Claude loads only the rules for the files it touches; a new general rule reaches every project without `copier update` |
+| CLI | Hydra for config-heavy commands, click for utilities | Hydra only; click wrapping Hydra; typer | each fits its job |
+| entry points | by lifecycle: workflow commands in `cli/`, one-offs in `scripts/` | by task type (data prep is a script); `scripts/` for everything; `cli/` only | commands get in-process tests and the layer check; one-offs stay out of the package; a task type says nothing about how often it runs |
+| example domain | rendered by default, deleted once real code exists | an empty skeleton; examples only in docs | new code copies working, checked code; `make check` covers the example in every project |
+
+## Change the template
+
+Edit `template/` and `copier.yml`, then run the tests: they render three variants (the defaults; Python 3.12 with
+W&B; no example), and in each run `make check`, the run command, `<cli>-configs --check`, `check-comments` and
+`check-conventions` on every `.py` file, and check the Claude settings, the protected files and the rules' shape.
+They also update a project across 1.0.0 to test the migration. Generated projects install nuikit and
+conventions-hooks from local checkouts:
+
+```bash
+NUIKIT_PATH=~/src/nuikit CONVENTIONS_PATH=~/src/conventions make test
+```
+
+Without the two variables, the tests that install a project are skipped and say why. CI checks out both repos at
+`main` next to this one. Commit, then tag `vMAJOR.MINOR.PATCH` so projects can `copier update`; a change that renames
+a question or removes a file projects already have needs a migration in `copier.yml`.
 
 ## Known issues
 
 - Python 3.14 needs `hydra-core>=1.4.0rc1`, a pre-release, because 1.3.x crashes on 3.14. Move the pin to 1.4.0 once
   it ships.
-- The tests don't exercise the LaTeX toolchain (`make report`), because it needs Docker and TeX Live.
