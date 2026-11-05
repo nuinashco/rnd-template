@@ -1,8 +1,9 @@
-# Template for R&D projects that follow the conventions in GUIDE.md.
+# Copier template for R&D projects built on nuikit and the nuinashco conventions.
 #
-#   copier copy <this repo> my-project
+#   uvx copier copy --trust gh:nuinashco/rnd-template my-project
+#   uvx copier update --trust                  # inside a generated project
 #
-# The project's files live in template/.
+# The project's files live in template/. `--trust` lets the migrations below run.
 
 _min_copier_version: "9.4.0"
 _subdirectory: template
@@ -11,6 +12,19 @@ _envops:
   trim_blocks: true
   lstrip_blocks: true
   keep_trailing_newline: true
+
+_migrations:
+  # 1.0.0 depends on nuikit and the conventions plugin instead of copying them in.
+  - version: "1.0.0"
+    command:
+      - "{{ _copier_python }}"
+      - -c
+      - >-
+        import pathlib, shutil;
+        paths = ['src/nuikit', 'tests/nuikit', 'CONVENTIONS.md',
+        '.claude/agents/conventions-reviewer.md', '.claude/agents/descriptions-judge.md'];
+        [shutil.rmtree(p) if p.is_dir() else p.unlink()
+        for p in map(pathlib.Path, paths) if p.exists()]
 
 project_name:
   type: str
@@ -58,9 +72,16 @@ use_wandb:
   help: Mirror runs to Weights & Biases (opt-in per run with `tracker=wandb`)?
   default: false
 
-guide_url:
+# Where the two dependencies come from: TOML inline tables for [tool.uv.sources].
+# Never asked; the template's tests pass `{ path = "..." }` to test local checkouts.
+nuikit_source:
   type: str
-  default: https://github.com/nuinashco/conventions/blob/main/GUIDE.md
+  default: '{ git = "https://github.com/nuinashco/nuikit", tag = "v0.1.0" }'
+  when: false
+
+hooks_source:
+  type: str
+  default: '{ git = "https://github.com/nuinashco/conventions", tag = "v0.1.0" }'
   when: false
 
 # Derived names, never asked.
