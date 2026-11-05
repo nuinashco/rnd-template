@@ -152,8 +152,9 @@ class GaussianSignal(Signal[GaussianSignalConfig]):  # The type argument binds C
 
 `SignalFactory.from_config({"kind": "gaussian", "std": 2})` validates against `GaussianSignalConfig` and builds the
 item; `make configs` writes `configs/signal/gaussian.yaml`, the file `signal=gaussian` selects. `MainConfig.signal`
-resolves its kind through `SignalFactory.validate`, so `signal=gausian` fails with exit code 2 and lists the
-registered kinds. The family's `__init__.py` imports `items`, so importing the family registers its kinds;
+resolves its kind through `SignalFactory.validate`, so a wrong kind (`signal.kind=gausian`, or `kind:` in a preset)
+fails with exit code 2 and lists the registered kinds; `signal=gausian` fails earlier, in Hydra, which lists the files
+in `configs/signal/`. The family's `__init__.py` imports `items`, so importing the family registers its kinds;
 `make configs` and the invariant tests import the whole package, so they see every family even before any code uses
 it.
 {% else %}
