@@ -3,8 +3,8 @@
 A [copier](https://copier.readthedocs.io/) template for research and development projects: tools, pipelines and
 training code, built as one package on [nuikit](https://github.com/nuinashco/nuikit), with Hydra + pydantic configs,
 families of items, run directories, structlog, attrs, pyright and import-linter. A new project starts opted in to the
-[nuinashco conventions](https://github.com/nuinashco/conventions): their checks run in pre-commit and CI, and their
-Claude Code plugins are enabled in `.claude/settings.json`.
+[nuinashco conventions](https://github.com/nuinashco/conventions): their checks run in pre-commit and, through the
+`conventions` Claude Code plugin, while Claude edits; `.claude/settings.json` enables that plugin and the `nuikit` one.
 
 ## Start a project
 
