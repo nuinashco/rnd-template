@@ -2,11 +2,10 @@
 #
 #   copier copy <this repo> my-project
 #
-# The project lives in templates/rnd/; files it shares with the hooks are Jinja
-# partials in shared/ (included, never copied on their own).
+# The project's files live in template/.
 
 _min_copier_version: "9.4.0"
-_subdirectory: templates/rnd
+_subdirectory: template
 _templates_suffix: .jinja
 _envops:
   trim_blocks: true
