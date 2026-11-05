@@ -72,6 +72,11 @@ use_wandb:
   help: Mirror runs to Weights & Biases (opt-in per run with `tracker=wandb`)?
   default: false
 
+example:
+  type: bool
+  help: Include the worked example domain (delete it once your first real family exists)?
+  default: true
+
 # Where the two dependencies come from: TOML inline tables for [tool.uv.sources].
 # Never asked; the template's tests pass `{ path = "..." }` to test local checkouts.
 nuikit_source:

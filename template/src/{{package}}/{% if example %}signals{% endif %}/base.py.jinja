@@ -1,0 +1,33 @@
+"""Signal family: the base every kind implements, its config and its factory."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+from abc import ABC, abstractmethod
+from typing import Any
+
+import numpy as np
+from attrs import define
+from numpy.typing import NDArray
+
+from nuikit.registry import Configurable, ConfigurableFactory, KindConfig
+
+
+class SignalConfig(KindConfig):
+    """Settings every `signal` kind shares."""
+
+
+@define
+class Signal[C: SignalConfig](Configurable[C], ABC):
+    """Source of sample values."""
+
+    @abstractmethod
+    def sample(self, n: int, *, rng: np.random.Generator) -> NDArray[np.float64]:
+        """Return `n` values, drawing any randomness from `rng`."""
+
+
+class SignalFactory(ConfigurableFactory[Signal[Any]]):
+    """Registry of `signal` kinds; `signal=<kind>` selects one."""
+
+    config_group = "signal"

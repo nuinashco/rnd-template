@@ -4,15 +4,27 @@
 from __future__ import annotations
 
 {% endif %}
+{% if example %}
+from collections.abc import Mapping
+from typing import Any{{ ", Literal" if use_wandb else "" }}
+
+from pydantic import Field, PositiveInt, SerializeAsAny, field_validator
+{% else %}
 {% if use_wandb %}
 from typing import Literal
 
 {% endif %}
 from pydantic import Field
+{% endif %}
 
 from nuikit.config import Schema
 from nuikit.configgen import ConfigFile
 from nuikit.logging import LogFormat, LogLevel
+{% if example %}
+from nuikit.registry import KindConfig
+
+from {{ package }}.signals.base import SignalConfig, SignalFactory
+{% endif %}
 
 
 class MainConfig(Schema):
@@ -39,6 +51,20 @@ class MainConfig(Schema):
         default=None, description="null: your default entity"
     )
 {% endif %}
+{% if example %}
+    samples: PositiveInt = 100
+    # SerializeAsAny keeps the kind's own fields in the run's config.yaml.
+    signal: SerializeAsAny[SignalConfig]
+
+    @field_validator("signal", mode="before")
+    @classmethod
+    def _signal_by_kind(cls, data: Mapping[str, Any] | KindConfig) -> KindConfig:
+        return SignalFactory.validate(data)
+{% endif %}
 
 
+{% if example %}
+GENERATED = (ConfigFile("defaults/run.yaml", MainConfig, groups=("signal",)),)
+{% else %}
 GENERATED = (ConfigFile("defaults/run.yaml", MainConfig),)
+{% endif %}

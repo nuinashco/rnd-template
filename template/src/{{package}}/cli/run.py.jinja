@@ -1,3 +1,14 @@
+{% if example %}
+"""`{{ cli }}-run`: sample the configured signal, summarize it, and record the run.
+
+Usage:
+
+    {{ cli }}-run                                   # configs/run.yaml as it is
+    {{ cli }}-run signal=constant signal.value=2    # Hydra overrides
+
+Writes runs/<run_name>/ with the resolved config, its provenance and summary.json.
+"""
+{% else %}
 """`{{ cli }}-run`: validate configs/run.yaml, seed, and start a run directory.
 
 Usage:
@@ -7,6 +18,7 @@ Usage:
 
 Writes runs/<run_name>/ with the resolved config and its provenance.
 """
+{% endif %}
 
 {% if legacy_python %}
 from __future__ import annotations
@@ -23,6 +35,10 @@ from nuikit.logging import configure_logging
 
 from {{ package }} import paths
 from {{ package }}.config import MainConfig
+{% if example %}
+from {{ package }}.signals.base import SignalFactory
+from {{ package }}.stats import report, summary
+{% endif %}
 
 # Loads .env and sets PROJECT_ROOT for ${oc.env:...} in configs.
 rootutils.setup_root(__file__, indicator=".project-root")
@@ -35,7 +51,12 @@ log = structlog.stdlib.get_logger()
 def main(dict_cfg: DictConfig) -> None:
     cfg = MainConfig.from_hydra(dict_cfg)
     configure_logging(level=cfg.log_level, fmt=cfg.log_format)
+{% if example %}
+    rng = seeding.seed_everything(cfg.seed, deterministic=cfg.deterministic)
+    signal = SignalFactory.from_config(cfg.signal)
+{% else %}
     seeding.seed_everything(cfg.seed, deterministic=cfg.deterministic)
+{% endif %}
     run_dir = runs.start_run(cfg, name=cfg.run_name, runs_dir=paths.RUNS_DIR)
 {% if use_wandb %}
     if cfg.tracker == "wandb":
@@ -43,4 +64,10 @@ def main(dict_cfg: DictConfig) -> None:
             cfg, run_dir, project=cfg.wandb_project, entity=cfg.wandb_entity
         )
 {% endif %}
+{% if example %}
+    result = summary.summarize(signal.sample(cfg.samples, rng=rng))
+    report.write(result, run_dir)
+    log.info("run_finished", run_dir=str(run_dir), signal=signal.kind, mean=result.mean)
+{% else %}
     log.info("run_started", run_dir=str(run_dir), seed=cfg.seed)
+{% endif %}

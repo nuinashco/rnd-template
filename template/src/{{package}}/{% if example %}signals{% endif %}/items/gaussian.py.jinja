@@ -1,0 +1,28 @@
+"""`gaussian` signal: independent draws from one normal distribution."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import numpy as np
+from attrs import define
+from numpy.typing import NDArray
+from pydantic import PositiveFloat
+
+from {{ package }}.signals.base import Signal, SignalConfig, SignalFactory
+
+
+class GaussianSignalConfig(SignalConfig):
+    """Settings of the `gaussian` signal."""
+
+    mean: float = 0.0
+    std: PositiveFloat = 1.0
+
+
+@SignalFactory.register("gaussian")  # Outermost: attrs replaces the class below it.
+@define
+class GaussianSignal(Signal[GaussianSignalConfig]):
+    """Signal of independent normal draws."""
+
+    def sample(self, n: int, *, rng: np.random.Generator) -> NDArray[np.float64]:
+        return rng.normal(self.config.mean, self.config.std, size=n)

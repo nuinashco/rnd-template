@@ -1,0 +1,24 @@
+"""Reports write every summary field into the run directory as JSON."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import json
+
+from {{ package }}.stats import report
+from {{ package }}.stats.summary import Summary
+
+
+def test_report_writes_summary_as_json(tmp_path):
+    result = Summary(count=2, mean=1.5, std=0.5, minimum=1.0, maximum=2.0)
+
+    path = report.write(result, tmp_path)
+
+    assert json.loads(path.read_text(encoding="utf-8")) == {
+        "count": 2,
+        "mean": 1.5,
+        "std": 0.5,
+        "minimum": 1.0,
+        "maximum": 2.0,
+    }

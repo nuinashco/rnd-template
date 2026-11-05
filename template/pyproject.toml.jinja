@@ -118,5 +118,9 @@ root_packages = ["{{ package }}"]
 name = "Layers: cli on top, paths at the bottom, every module placed"
 type = "layers"
 containers = ["{{ package }}"]
+{% if example %}
+layers = ["cli", "config", "signals | stats", "paths"]
+{% else %}
 layers = ["cli", "config", "paths"]
+{% endif %}
 exhaustive = true

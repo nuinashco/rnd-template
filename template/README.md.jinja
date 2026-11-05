@@ -17,16 +17,28 @@ never used them, add their marketplace first with `/plugin marketplace add nuina
 ## Daily workflow
 
 1. Run: `{{ cli }}-run`, overriding anything Hydra-style:
+{% if example %}
+   `{{ cli }}-run seed=1 run_name=baseline signal=constant`.
+{% else %}
    `{{ cli }}-run seed=1 run_name=baseline`.
+{% endif %}
 2. Results land in `runs/<run_name>/`: the resolved `config.yaml` (secrets masked), `run.json` (git SHA, dirty flag,
+{% if example %}
+   argv, start time) and the run's outputs, here `summary.json`.
+{% else %}
    argv, start time) and the run's outputs.
+{% endif %}
 3. Before committing: `make check`.
 
 ## Commands
 
 | command | does |
 |---|---|
+{% if example %}
+| `{{ cli }}-run` | validate the config, seed, start a run directory, sample the signal and write its summary |
+{% else %}
 | `{{ cli }}-run` | validate the config, seed, start a run directory |
+{% endif %}
 | `{{ cli }}-configs` | regenerate `configs/` from the config schemas (`--check` only reports) |
 | `make help` | list every make target |
 
@@ -34,11 +46,17 @@ never used them, add their marketplace first with `/plugin marketplace add nuina
 
 `configs/defaults/run.yaml` lists every setting with its default, commented where the options or meaning are not
 obvious. It is generated from the schema in `src/{{ package }}/config.py`, so it is never edited.
+{% if example %}
+`configs/signal/` holds one generated file per signal kind; `signal=<kind>` picks one.
+{% endif %}
 To change a value:
 
 | for | edit |
 |---|---|
 | one run | `key=value` on the command line; the run directory records it |
+{% if example %}
+| a reusable variant of one part | a preset in its group, such as `configs/signal/noisy.yaml` composing `gaussian` |
+{% endif %}
 | every run of this repo | `configs/run.yaml`, the entry config, below its `defaults:` list |
 | the default itself | the schema, then `make configs` |
 

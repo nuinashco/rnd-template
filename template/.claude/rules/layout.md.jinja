@@ -18,8 +18,13 @@ FAM, CFG, ERR-1, ERR-2, LOG-1, LOG-3, RUN-1 and RUN-2 with the `nuikit` plugin
 ([nuinashco/nuikit](https://github.com/nuinashco/nuikit/blob/main/docs/guide.md)).
 
 This project's import layers (ARC-1), top to bottom, as the exhaustive contract in `pyproject.toml` declares them:
+{% if example %}
+`cli` > `config` > `signals | stats` > `paths`. Siblings joined by `|` never import each other. A new domain goes
+between `config` and `paths`, as a sibling or in a layer of its own above the domains it imports.
+{% else %}
 `cli` > `config` > `paths`. A new domain goes between `config` and `paths`; domains that don't import each other share
 one layer as siblings (`"a | b"`).
+{% endif %}
 `make check` fails until a new subpackage is placed.
 
 ### LAY-4 MUST

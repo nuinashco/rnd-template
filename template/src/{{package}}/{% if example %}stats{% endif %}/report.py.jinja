@@ -1,0 +1,20 @@
+"""Write a sample's summary into its run directory."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import json
+from pathlib import Path
+
+from attrs import asdict
+
+from {{ package }}.stats.summary import Summary
+
+
+def write(summary: Summary, run_dir: Path) -> Path:
+    """Write `summary` to summary.json in `run_dir`; return the file's path."""
+    path = run_dir / "summary.json"
+    text = json.dumps(asdict(summary), ensure_ascii=False, indent=2)
+    path.write_text(text + "\n", encoding="utf-8")
+    return path

@@ -1,0 +1,7 @@
+"""Signal family: sources of sample values, one kind per module in `items/`."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+from {{ package }}.signals import items as items
