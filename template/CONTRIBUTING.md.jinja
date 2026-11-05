@@ -1,9 +1,17 @@
 # Contributing
 
-How {{ project_name }} is built and how to change it. Using it: [README.md](README.md). Conventions that apply to
-every project, with their reasons: [CONVENTIONS.md](CONVENTIONS.md) (a read-only copy of the guide; `copier update`
-refreshes it). The `conventions-reviewer` subagent in `.claude/agents/` checks a branch or the repo against it;
-`descriptions-judge` checks each config description and YAML comment against DOC-7 and the code.
+How {{ project_name }} is built and how to change it. Using it: [README.md](README.md).
+
+The rules it follows, each with its reason and its check, live in three places:
+
+- [nuinashco/conventions](https://github.com/nuinashco/conventions/blob/main/GUIDE.md): the rules for every Python
+  repo (LAY, ARC, TYP, STY, DOC, ERR, LOG, TST, RDOC, GIT, TOOL). The `conventions` Claude Code plugin carries them
+  as skills, with the `conventions-reviewer` and `descriptions-judge` subagents.
+- [nuinashco/nuikit](https://github.com/nuinashco/nuikit/blob/main/docs/guide.md): the rules of the library this
+  project builds on (FAM, CFG, ERR-1, ERR-2, LOG-1, LOG-3, RUN-1, RUN-2), carried by the `nuikit` plugin's skills.
+- [.claude/rules/](.claude/rules/): the rules of [nuinashco/rnd-template](https://github.com/nuinashco/rnd-template),
+  which made this project (LAY-4, LAY-7, ENV-1 to ENV-3, TST-5, RUN-3 to RUN-7, TOOL-3); `copier update` refreshes
+  them.
 
 ## Architecture
 
@@ -19,21 +27,37 @@ flowchart TD
     project --> nuikit
     pure["teal: decides, same input same output"]:::pure
     side["rust: acts on files, processes, network"]:::side
-    kit["grey: copied from the conventions template"]:::kit
+    kit["grey: the nuikit library, a dependency"]:::kit
     classDef pure fill:#d9f2ec,stroke:#1b7f6b,color:#0b3d33
     classDef side fill:#f8e3d8,stroke:#b4532a,color:#4a1f0c
     classDef kit fill:#ececec,stroke:#6b6b6b,color:#262626
 ```
 
 `{{ package }}` holds this project's code and nothing else. Each seam keeps the two colours apart, so a dry run can
-execute the pure half for real. Domain packages go between `config` and `paths`.
+execute the pure half for real.
 
-`nuikit` is the machinery every project built from the template shares: what schemas and families build on, and
-what an entry point sets up before it runs. Copier writes it; fixes go upstream and arrive with `copier update`.
+`nuikit` is the library every project from the template builds on: what schemas and families extend, and what an
+entry point sets up before it runs. `[tool.uv.sources]` pins its release tag; `copier update` moves the pin when the
+template moves to a new release, and fixes go to [nuinashco/nuikit](https://github.com/nuinashco/nuikit).
 
-Dependencies point down: `cli` > `config` > `paths`, and any layer may import `nuikit`. The import-linter contracts
-in `pyproject.toml` enforce the order and keep `nuikit` from importing `{{ package }}`. The layers contract is
-exhaustive, so a new subpackage fails `make check` until it is placed in `layers`.
+## Import layers
+
+Dependencies point down: `cli` > `config` > `paths`, and any layer may import `nuikit`.
+The import-linter contract in `pyproject.toml` enforces the order. It is exhaustive, so a new subpackage fails
+`make check` until it is placed in `layers`: a domain goes between `config` and `paths`, as a sibling of the domains
+it doesn't import or in a layer above them. A standalone subpackage (a proxy, a client) also gets a `forbidden`
+contract that keeps it from importing the rest of the package except `paths` (ARC-1).
+
+## Main run
+
+```mermaid
+sequenceDiagram
+    participant run as cli/run.py
+    participant nuikit
+    run->>nuikit: MainConfig.from_hydra(cfg) validates the composed config
+    run->>nuikit: configure_logging, then seed_everything returns rng
+    run->>nuikit: start_run writes config.yaml and run.json into runs/run_name/
+```
 
 ## Repository layout
 
@@ -46,19 +70,19 @@ src/{{ package }}/
   cli/                    one module per console script: the composition roots
   config.py               entry config schemas + GENERATED (files `make configs` writes)
   paths.py                repository paths, from the .project-root marker
-src/nuikit/               copied from the conventions template: config, configgen, registry, errors, logging,
-                          runs, seeding
-tests/                    mirrors src/ module by module; tests/nuikit/ comes with the template
+tests/                    mirrors src/ module by module
   test_invariants.py      configs compose and are fresh, kinds build, import layers hold
   integration/            end to end, `-m integration`
 scripts/                  exploratory or one-time runnables, never imported; rerun ones become cli/ commands
 notebooks/                exploration only, outputs stripped; reference/ for third-party notebooks
+.claude/                  settings.json enables the plugins; rules/ holds the template's rules
 runs/ data/               gitignored
 ```
 
 ## Families
 
-A family is a concept with several implementations chosen by a config `kind`:
+A family is a concept with several implementations chosen by a config `kind`. The `nuikit` plugin's `add-family` and
+`add-family-item` skills walk through adding one.
 
 ```text
 src/{{ package }}/<family>/
@@ -85,9 +109,9 @@ class Square(Shape[SquareConfig]):  # The type argument binds Square.Config.
 ```
 
 `ShapeFactory.from_config({"kind": "square", "side_m": 2})` validates against `SquareConfig` and builds the item;
-`make configs` writes `configs/shape/square.yaml`, the file `shape=square` selects. The family's `__init__.py` imports `items`, so importing
-the family registers its kinds; `make configs` and the invariant tests import the whole package, so they see every
-family even before any code uses it.
+`make configs` writes `configs/shape/square.yaml`, the file `shape=square` selects. The family's `__init__.py` imports
+`items`, so importing the family registers its kinds; `make configs` and the invariant tests import the whole package,
+so they see every family even before any code uses it.
 
 ## Extending
 
@@ -114,3 +138,8 @@ Conventional Commits with the standard types (`feat fix docs refactor test build
 optional scope, a lowercase imperative subject: one line, no articles, no body or trailers. Short-lived `<type>/<slug>`
 branches, squash-merged. The commit-msg hooks check all of it. PR descriptions follow
 `.github/pull_request_template.md`; `make github`, run once per repo, makes the squash commit the PR title alone.
+
+## Deviations
+
+None yet. A rule this repo can't follow yet goes here, with the reason. A rule that does not apply to it at all also
+goes in `ignore` of the `[tool.conventions]` table in `pyproject.toml`, so the hooks skip it.

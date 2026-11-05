@@ -11,6 +11,9 @@ make setup          # uv sync + git hooks
 cp .env.example .env
 ```
 
+In Claude Code, trust the folder and install the `conventions` and `nuikit` plugins it offers; on a machine that has
+never used them, add their marketplace first with `/plugin marketplace add nuinashco/conventions`.
+
 ## Daily workflow
 
 1. Run: `{{ cli }}-run`, overriding anything Hydra-style:
@@ -30,7 +33,8 @@ cp .env.example .env
 ## Configs
 
 `configs/defaults/run.yaml` lists every setting with its default, commented where the options or meaning are not
-obvious. It is generated from the schema in `src/{{ package }}/config.py`, so it is never edited. To change a value:
+obvious. It is generated from the schema in `src/{{ package }}/config.py`, so it is never edited.
+To change a value:
 
 | for | edit |
 |---|---|
