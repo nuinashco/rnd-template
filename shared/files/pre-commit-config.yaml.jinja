@@ -31,7 +31,7 @@ repos:
         name: uv.lock is up to date
         entry: uv lock --check
         language: system
-        files: ^(pyproject\.toml|uv\.lock|labs/[^/]+/pyproject\.toml)$
+        files: ^(pyproject\.toml|uv\.lock)$
         pass_filenames: false
       - id: ruff-check
         name: ruff check

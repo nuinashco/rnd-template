@@ -32,11 +32,7 @@ finding (compare with `git log` and `.copier-answers.yml`).
 
 1. Run the mechanical checks and report each in one line; do not re-derive what they already enforce:
    `uv run ruff check`, `uv run ruff format --check`, `uv run pyright`,
-{% if profile == 'rnd' %}
    `uv run lint-imports`, `uv run pytest -q`, `uv run {{ cli }}-configs --check`.
-{% else %}
-   `uv run pytest -q`, `uv run {{ cli }} configs --check`.
-{% endif %}
 2. Judge the rules that no tool checks, on the files in scope. In particular:
    - layout and entry points: LAY-4, LAY-7, CFG-5, TST-4 (a mirrored test file for every module with branching
      logic), RDOC-2;
@@ -55,9 +51,6 @@ finding (compare with `git log` and `.copier-answers.yml`).
    - tests: TST-1 to TST-3 and TST-6 (sentence names, no overlapping cases, fakes not mocks, nothing slow without a
      reason);
    - runs: RUN-1 to RUN-3;
-{% if profile == 'uni' %}
-   - course work: UNI-1 to UNI-6 (labs created with `make lab`, numbers only through generated `values.tex`);
-{% endif %}
    - process, on a branch only: GIT-1 and GIT-2 on `git log <default>..HEAD`, RDOC-5 (docs change with the code).
 3. Back every finding with `path:line` and the smallest excerpt that proves it. A finding you cannot cite is not
    a finding: leave it out.
