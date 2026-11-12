@@ -55,7 +55,9 @@ execute the pure half for real.
 
 `nuikit` is the library every project from the template builds on: what schemas and families extend, and what an
 entry point sets up before it runs. `[tool.uv.sources]` pins its release tag; `copier update` moves the pin when the
-template moves to a new release, and fixes go to [nuinashco/nuikit](https://github.com/nuinashco/nuikit).
+template moves to a new release, and fixes go to [nuinashco/nuikit](https://github.com/nuinashco/nuikit). Install
+with uv: pip does not read `[tool.uv.sources]` and would look for nuikit and conventions-hooks on PyPI, where they
+are not published.
 
 ## Import layers
 
@@ -233,8 +235,10 @@ child processes and servers only for what cannot be measured in process.
 Conventional Commits with the standard types (`feat fix docs refactor test build ci perf style chore revert`), an
 optional scope, a lowercase imperative subject: one line, no articles, no body or trailers. Short-lived `<type>/<slug>`
 branches, squash-merged. The commit-msg hooks check the type, the single line, its length, the lowercase start, the
-final period and the articles. PR descriptions follow `.github/pull_request_template.md`; `make github`, run once per
-repo with the `gh` CLI, makes the squash commit the PR title alone.
+final period and the articles; they expect git's default comment character `#`, so with another
+`core.commentChar` a commit written in an editor is refused. PR descriptions follow
+`.github/pull_request_template.md`; `make github`, run once per repo with the `gh` CLI, makes the squash commit the
+PR title alone.
 
 ## Deviations
 

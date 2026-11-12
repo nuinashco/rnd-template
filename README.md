@@ -86,7 +86,8 @@ copied into it: [UPGRADING.md](UPGRADING.md) has the steps.
 | [conventions](https://github.com/nuinashco/conventions) | The rules, the checks that enforce them and the Claude Code plugins. |
 
 A project pins a release tag of each under `[tool.uv.sources]` in its `pyproject.toml`. A template release moves the
-pins, and `copier update` brings them to the project.
+pins, and `copier update` brings them to the project. The plugins are not pinned: they follow the `main` branch of
+their repos and update themselves.
 
 ## Contributing
 
