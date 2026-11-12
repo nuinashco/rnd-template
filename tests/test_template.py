@@ -297,7 +297,7 @@ def module(project: Path) -> Iterator[Path]:
     ("source", "finding"),
     [
         (
-            '\n\ndef scale(values, factor):\n    """Scale."""\n    return values\n',
+            '\ndef scale(values, factor):\n    """Scale."""\n    return values\n',
             "ANN001",
         ),
         ('UNIT = "caf\u00e9"\n', "STY-8"),
@@ -305,7 +305,8 @@ def module(project: Path) -> Iterator[Path]:
     ids=["signature-without-types", "letter-outside-ascii"],
 )
 def test_lint_names_what_module_breaks(module, source, finding):
-    module.write_text(f'"""Scaling."""\n\n{source}', encoding="utf-8")
+    header = '"""Scaling."""\n\nfrom __future__ import annotations\n\n'
+    module.write_text(header + source, encoding="utf-8")
 
     result = subprocess.run(
         ["make", "lint"],
