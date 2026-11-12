@@ -194,10 +194,13 @@ def test_sweep_named_as_readme_says_gives_each_job_its_run_directory(project):
     name = "run_name=sweep_${hydra:job.num}"
     assert name in (project / "README.md").read_text(encoding="utf-8")
 
-    sh(project, "uv", "run", "demo-run", "-m", "seed=1,2", name)
+    sh(project / "scripts", "uv", "run", "demo-run", "-m", "seed=1,2", name)
 
     assert (project / "runs" / "sweep_0" / "run.json").is_file()
     assert (project / "runs" / "sweep_1" / "run.json").is_file()
+    # Hydra's sweep folder lands at the root, where git ignores it.
+    assert (project / "multirun").is_dir()
+    assert not (project / "scripts" / "multirun").exists()
 
 
 def test_generated_configs_match_their_schemas(project):
