@@ -8,12 +8,16 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
+      # The three hooks that rewrite files leave third-party notebooks as published (TOOL-5).
       - id: end-of-file-fixer
+        exclude: ^notebooks/reference/
       - id: trailing-whitespace
+        exclude: ^notebooks/reference/
   - repo: https://github.com/kynan/nbstripout
     rev: 0.9.1
     hooks:
       - id: nbstripout
+        exclude: ^notebooks/reference/
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
@@ -71,8 +75,3 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [manual]
-      - id: ascii-only-python
-        name: ASCII-only .py files (STY-8)
-        entry: "[^\\x00-\\x7F]"
-        language: pygrep
-        types: [python]

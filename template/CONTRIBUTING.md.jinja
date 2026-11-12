@@ -28,11 +28,13 @@ flowchart TD
         paths["paths.py<br/>repository paths"]:::side
 {% if example %}
         cli --> config --> signals
+        cli --> signals
         cli --> report --> summary
         cli --> summary
         cli --> paths
 {% else %}
-        cli --> config --> paths
+        cli --> config
+        cli --> paths
 {% endif %}
     end
     nuikit["nuikit<br/>config, configgen, registry, errors,<br/>logging, runs, seeding"]:::kit
@@ -206,30 +208,33 @@ so they see every family even before any code uses it.
 Once the first real family exists, drop `signals` and `stats` from a clean working tree:
 
 ```bash
-uvx copier update --trust --defaults --data example=false
+uvx copier update --defaults --data example=false
 ```
 
 Copier deletes the example's files and takes its lines out of `config.py`, `cli/run.py`, `configs/run.yaml`, the
 import layers and these docs. It marks conflicts inline, between `<<<<<<< before updating` and
-`>>>>>>> after updating`; resolve them, then run `make configs` and `make check`.
+`>>>>>>> after updating`; resolve them, then run `make configs` and `make check`. The update also takes out the
+imports the example used: put back the ones your own code still needs, which `make lint` lists as F821.
 {% endif %}
 
 ## Tests
 
 ```bash
-make test               # unit tests, a few seconds
-make test-integration   # end to end, behind the integration marker
+make test
+make test-integration
 ```
 
-Fakes, not mocks (`unittest.mock` is banned by ruff). Each case covers a distinct behaviour; child processes and
-servers only for what cannot be measured in process.
+`make test` runs the unit tests, in a few seconds; `make test-integration` runs the end-to-end ones, which carry the
+`integration` marker. Fakes, not mocks (`unittest.mock` is banned by ruff). Each case covers a distinct behaviour;
+child processes and servers only for what cannot be measured in process.
 
 ## Commits
 
 Conventional Commits with the standard types (`feat fix docs refactor test build ci perf style chore revert`), an
 optional scope, a lowercase imperative subject: one line, no articles, no body or trailers. Short-lived `<type>/<slug>`
-branches, squash-merged. The commit-msg hooks check all of it. PR descriptions follow
-`.github/pull_request_template.md`; `make github`, run once per repo, makes the squash commit the PR title alone.
+branches, squash-merged. The commit-msg hooks check the type, the single line, its length, the lowercase start, the
+final period and the articles. PR descriptions follow `.github/pull_request_template.md`; `make github`, run once per
+repo with the `gh` CLI, makes the squash commit the PR title alone.
 
 ## Deviations
 

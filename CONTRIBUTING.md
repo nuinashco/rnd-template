@@ -8,9 +8,10 @@ How the template is built and how to change it. Using it: [README.md](README.md)
 
 ```text
 copier.yml        the questions, the hidden answers (nuikit_source, hooks_source), derived names, _migrations
+migrations/       scripts that `_migrations` run in a project during `copier update`
 template/         the generated project; *.jinja files are rendered, `{% if example %}` names only with the example
   .claude/        settings.json (the plugins, no hooks) and rules/ (this template's rules, path-scoped)
-tests/            test_template.py: three variants, updates from the v0.3.4 release, removing the example
+tests/            test_template.py: three variants, awkward answers, updates from v0.3.4, removing the example
 Makefile          lint and test
 ```
 
@@ -43,11 +44,12 @@ a retired one.
 ## Tests
 
 ```bash
-make lint    # ruff, check-comments and check-conventions on tests/
-make test    # about a minute; needs network
+make lint
+make test
 ```
 
-The tests render the three variants and, in each project, run `make check`, the run command and
+`make lint` runs ruff, `check-comments` and `check-conventions` on `tests/` and `migrations/`. `make test` takes
+about a minute and needs network. The tests render the three variants and, in each project, run `make check`, the run command and
 `<cli>-configs --check`, then check the Claude settings, the protected files and the shape of the rules. They also
 start a project from the real `v0.3.4` release and update it to the working tree: the copies go, `make check` passes,
 and a `uni` or `lab` project is refused untouched. That needs the release tags, so fetch them (`git fetch --tags`).

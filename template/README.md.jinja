@@ -7,12 +7,22 @@ How the code is built and how to change it: [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Setup
 
 ```bash
-make setup          # uv sync + git hooks
+make setup
 cp .env.example .env
 ```
 
-In Claude Code, trust the folder and install the `conventions` and `nuikit` plugins it offers; on a machine that has
-never used them, add their marketplace first with `/plugin marketplace add nuinashco/conventions`.
+`make setup` installs the dependencies into `.venv` and the git hooks. After moving or renaming the folder, run
+`rm -rf .venv && make setup`: the scripts in `.venv` name the old path.
+
+`.claude/settings.json` turns on two Claude Code plugins, `conventions` and `nuikit`. Install them once per machine:
+
+```text
+/plugin marketplace add nuinashco/conventions
+/plugin install conventions@nuinashco
+/plugin install nuikit@nuinashco
+```
+
+A cloud session loads no plugins; there AGENTS.md sends Claude to the rules instead.
 
 ## Daily workflow
 
@@ -29,6 +39,11 @@ never used them, add their marketplace first with `/plugin marketplace add nuina
    argv, start time) and the run's outputs.
 {% endif %}
 3. Before committing: `make check`.
+{% if use_wandb %}
+
+To mirror a run to Weights & Biases, add `tracker=wandb`. Log in once with `uv run wandb login`, or put
+`WANDB_API_KEY` in `.env`; `wandb_project` and `wandb_entity` choose where the run goes.
+{% endif %}
 
 ## Commands
 
@@ -55,9 +70,22 @@ To change a value:
 |---|---|
 | one run | `key=value` on the command line; the run directory records it |
 {% if example %}
-| a reusable variant of one part | a preset in its group, such as `configs/signal/noisy.yaml` composing `gaussian` |
+| a reusable variant of one part | a preset you add to its group, such as `configs/signal/noisy.yaml` below |
 {% endif %}
 | every run of this repo | `configs/run.yaml`, the entry config, below its `defaults:` list |
 | the default itself | the schema, then `make configs` |
+{% if example %}
 
-Secrets go in `.env` and reach configs as `${oc.env:NAME,null}`.
+A preset starts from a kind and changes some of its values. This one is selected with `signal=noisy`:
+
+```yaml
+# configs/signal/noisy.yaml
+defaults:
+  - gaussian
+
+std: 3.0
+```
+{% endif %}
+
+Secrets go in `.env`, reach configs as `${oc.env:NAME,null}` and are typed `SecretStr` in the schema: only those
+fields are masked in a run's `config.yaml`.

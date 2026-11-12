@@ -8,7 +8,7 @@ ENV-3, TST-5, RUN-3 to RUN-7 and TOOL-3, written in `template/.claude/rules/`. M
 ## Commands
 
 ```bash
-make lint     # ruff, check-comments and check-conventions on tests/
+make lint     # ruff, check-comments and check-conventions on tests/ and migrations/
 make test     # render every variant, run its make check, commands and hooks; update a real v0.3.4 project
 NUIKIT_PATH=../nuikit CONVENTIONS_PATH=../conventions make lint test    # the same against local checkouts
 ```
@@ -21,9 +21,10 @@ they are on disk. The update tests need the release tags: `git fetch --tags`.
 
 ```text
 copier.yml        questions, hidden answers (nuikit_source, hooks_source), derived names, _migrations
+migrations/       scripts that `_migrations` run in a project during `copier update`
 template/         the generated project; *.jinja files are rendered, `{% if example %}` names render only with the example
   .claude/        settings.json (the plugins, no hooks) and rules/ (this template's rules, path-scoped)
-tests/            test_template.py: three variants, updates from the v0.3.4 release, removing the example
+tests/            test_template.py: three variants, awkward answers, updates from v0.3.4, removing the example
 README.md         starting and updating a project
 CONTRIBUTING.md   what lives in the other repos, tests, releases, decisions
 ```

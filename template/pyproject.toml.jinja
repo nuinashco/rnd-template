@@ -1,9 +1,10 @@
+{% macro toml(text) %}"{{ text | regex_replace('[\\x00-\\x1f\\x7f]', ' ') | replace('\\', '\\\\') | replace('"', '\\"') }}"{% endmacro %}
 [project]
 name = "{{ project_name }}"
 version = "0.1.0"
-description = "{{ description }}"
+description = {{ toml(description) }}
 readme = "README.md"
-authors = [{ name = "{{ author_name }}", email = "{{ author_email }}" }]
+authors = [{ name = {{ toml(author_name) }}, email = {{ toml(author_email) }} }]
 requires-python = ">={{ python }}"
 dependencies = [
     "attrs>=26.1",
@@ -54,12 +55,15 @@ module-name = "{{ package }}"
 [tool.ruff]
 line-length = 88
 src = ["src", "tests"]
+extend-exclude = ["*.ipynb"]  # Notebooks are for exploration; nbstripout checks them (RUN-5).
 
 [tool.ruff.lint]
 select = [
     "E", "F", "W", "I", "B", "UP", "SIM", "RET", "PTH", "C4", "C90", "RUF", "TID",
     "FBT", "N", "PERF", "G", "LOG", "BLE", "PL", "D", "NPY", "ERA", "T20",
     "TD004", "TD005", "TD006", "TD007",  # A TODO says what and why (DOC-6).
+    "ANN",  # Every signature in src/ is annotated (TYP-1).
+    "PGH004",  # A `# noqa` names its rule (STY-2).
     "D401",  # The google convention drops imperative mood; selecting it restores it.
 {% if legacy_python %}
     "FA",
@@ -69,12 +73,14 @@ ignore = [
     "PLC0415",  # Lazy imports of heavy or optional dependencies are deliberate.
     "PLR2004",  # Thresholds and shapes read better inline than as constants.
     "PLR0913",  # Config-heavy constructors take many keyword arguments.
+    "ANN401",  # `Any` fits JSON-shaped payloads and lazily imported objects (TYP-8).
     "D102", "D103", "D105", "D106", "D107",  # Document methods only when non-obvious.
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "src/{{ package }}/cli/**" = ["T201"]
-"scripts/**" = ["T201"]
+"scripts/**" = ["T201", "ANN"]
+"tests/**" = ["ANN"]  # Test functions and fixtures may skip annotations (TYP-1).
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

@@ -1,19 +1,19 @@
 {% if example %}
-"""`{{ cli }}-run`: sample the configured signal, summarize it, and record the run.
+"""`{{ cli }}-run`: sample a signal, summarize it and record the run.
 
 Usage:
 
-    {{ cli }}-run                                   # configs/run.yaml as it is
+    {{ cli }}-run                                   # configs/run.yaml
     {{ cli }}-run signal=constant signal.value=2    # Hydra overrides
 
 Writes runs/<run_name>/ with the resolved config, its provenance and summary.json.
 """
 {% else %}
-"""`{{ cli }}-run`: validate configs/run.yaml, seed, and start a run directory.
+"""`{{ cli }}-run`: validate the config, seed and start a run.
 
 Usage:
 
-    {{ cli }}-run                            # configs/run.yaml as it is
+    {{ cli }}-run                            # configs/run.yaml
     {{ cli }}-run seed=1 run_name=baseline   # Hydra overrides
 
 Writes runs/<run_name>/ with the resolved config and its provenance.

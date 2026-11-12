@@ -1,13 +1,14 @@
 # Copier template for R&D projects built on nuikit and the nuinashco conventions.
 #
 #   uvx copier copy gh:nuinashco/rnd-template my-project
-#   uvx copier update --trust                  # inside a generated project
+#   uvx copier update                          # inside a generated project
 #
-# The project's files live in template/. `--trust` lets the migrations below run. A project made
-# before 1.0.0 first sets `_src_path: gh:nuinashco/rnd-template` in its .copier-answers.yml, which
-# still names nuinashco/conventions (README.md, "Update a project").
+# The project's files live in template/. An update that runs one of the migrations below needs
+# `--trust`. A project made before 1.0.0 first sets `_src_path: gh:nuinashco/rnd-template` in its
+# .copier-answers.yml, which still names nuinashco/conventions (README.md, "Update a project").
 
-_min_copier_version: "9.4.0"
+# 9.4.0 and 9.6.0 cannot read _copier_conf in a default, which `project_name` does.
+_min_copier_version: "9.7.0"
 _subdirectory: template
 _templates_suffix: .jinja
 _envops:
@@ -24,17 +25,8 @@ _migrations:
     when: "{{ _stage == 'before' }}"
     command:
       - "{{ _copier_python }}"
-      - -c
-      - |
-        import sys, yaml
-        with open("{{ _copier_conf.answers_file }}", encoding="utf-8") as answers:
-            profile = yaml.safe_load(answers).get("profile", "rnd")
-        if profile != "rnd":
-            sys.exit(f"error: rnd-template 1.0.0 has no {profile} profile, so this project stays "
-                     "on the release it was made from; nothing was changed")
-        print("1.0.0 removes src/nuikit, tests/nuikit, CONVENTIONS.md and the two subagents in "
-              ".claude/agents, local edits included: nuikit and the plugins bring them now. "
-              "`git checkout HEAD -- <path>` brings one back before you commit.")
+      - "{{ _copier_conf.src_path }}/migrations/before_1_0_0.py"
+      - "{{ _copier_conf.answers_file }}"
   - version: "1.0.0"
     command:
       - "{{ _copier_python }}"
@@ -48,19 +40,37 @@ _migrations:
 
 project_name:
   type: str
-  help: Distribution name (kebab-case, e.g. llm-eval-launcher)
+  help: Distribution name, kebab-case (e.g. llm-eval-launcher)
+  default: "{{ _copier_conf.dst_path | realpath | basename }}"
+  # Copier cuts a message off at the terminal's width, after its own 46 characters.
   validator: >-
-    {% if not (project_name | regex_search('^[a-z][a-z0-9-]*$')) %}
-    use lowercase letters, digits and dashes, starting with a letter
+    {% if not (project_name | regex_search('^[a-z]([a-z0-9-]*[a-z0-9])?$')) %}
+    use kebab-case, like my-project
     {% endif %}
 
 package:
   type: str
   help: Import name of the package
   default: "{{ project_name | replace('-', '_') }}"
+  # 27 characters keep every generated line within 88 columns. A keyword cannot be imported, the
+  # modules listed are ones Python or a dependency already has, and LAY-2 refuses the last six.
   validator: >-
     {% if not (package | regex_search('^[a-z][a-z0-9_]*$')) %}
-    use a lowercase Python identifier
+    use snake_case, like my_project
+    {% elif package | length > 27 %}
+    use at most 27 characters
+    {% elif package in ('and as assert async await break class continue def del elif else except
+    finally for from global if import in is lambda nonlocal not or pass raise return try while
+    with yield').split() %}
+    a Python keyword; pick another name
+    {% elif package in ('abc array ast calendar code copy csv email enum glob html http io json
+    logging math numbers os parser platform profile queue random re resource secrets select
+    signal site statistics string struct sys test tests time token trace types typing uuid xml
+    attr attrs click hydra nuikit numpy omegaconf pydantic pytest rootutils structlog wandb
+    yaml').split() %}
+    hides a module of that name; pick another
+    {% elif package in ('common core helpers misc util utils').split() %}
+    too vague (LAY-2); name what it does
     {% endif %}
 
 description:
@@ -94,7 +104,7 @@ use_wandb:
 
 example:
   type: bool
-  help: Include the worked example domain (delete it once your first real family exists)?
+  help: Include the worked example (delete it once a real family exists)?
   # Only projects made before 1.0.0 carry a `profile` answer, so updating one leaves the example out.
   default: "{{ profile is not defined }}"
 

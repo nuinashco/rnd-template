@@ -8,11 +8,11 @@ CONVENTIONS := $(if $(CONVENTIONS_PATH),--with-editable "$(CONVENTIONS_PATH)",--
 help:  ## show targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
 
-lint:  ## ruff, check-comments and check-conventions on the template's own tests
+lint:  ## ruff, check-comments and check-conventions on the template's own Python
 	uv run ruff check
 	uv run ruff format --check
-	uv run $(CONVENTIONS) check-comments tests/*.py
-	uv run $(CONVENTIONS) check-conventions tests/*.py
+	uv run $(CONVENTIONS) check-comments tests/*.py migrations/*.py
+	uv run $(CONVENTIONS) check-conventions tests/*.py migrations/*.py
 
 test:  ## render every variant and run its checks (NUIKIT_PATH, CONVENTIONS_PATH: local checkouts)
 	uv run pytest -rs

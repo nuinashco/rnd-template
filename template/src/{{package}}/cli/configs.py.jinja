@@ -1,10 +1,10 @@
-"""`{{ cli }}-configs`: regenerate the YAML files that mirror config schemas.
+"""`{{ cli }}-configs`: write the YAML files that mirror the schemas.
 
 Usage:
 
     {{ cli }}-configs            # rewrite stale files in configs/
 
-    {{ cli }}-configs --check    # fail instead, listing the stale files
+    {{ cli }}-configs --check    # fail instead, listing stale files
 """
 
 {% if legacy_python %}

@@ -2,8 +2,6 @@
 __pycache__/
 *.py[cod]
 .venv/
-build/
-dist/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
@@ -13,6 +11,9 @@ htmlcov/
 # Secrets and machine-specific settings (see .env.example)
 .env
 
+# CI installs from the lock file, so it stays in git even where a global ignore lists *.lock.
+!uv.lock
+
 # Notebooks
 .ipynb_checkpoints/
 
@@ -21,13 +22,16 @@ htmlcov/
 .idea/
 .vscode/
 
-# Hydra
-outputs/
-multirun/
-
-# Run outputs and local data
-runs/
-data/
+# Builds, Hydra's own outputs, run outputs and local data. The leading slash keeps these to
+# the top level, so a package named `data` or `runs` under src/ or tests/ stays in git.
+/build/
+/dist/
+/outputs/
+/multirun/
+/runs/
+/data/
 {% if use_wandb %}
+
+# Weights & Biases, wherever a run starts
 wandb/
 {% endif %}
