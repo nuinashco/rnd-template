@@ -45,6 +45,29 @@ AWKWARD = {
     ),
     "author_name": 'Zo\u00eb "Zed" O\'Neil',
 }
+# A script as LAY-7 allows it: matplotlib is declared here, and the project lacks it.
+FIGURE_SCRIPT = """\
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "matplotlib>=3.9",
+# ]
+# ///
+\"\"\"Plot the loss of one run for a note.\"\"\"
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+
+run_dir = Path(sys.argv[1])
+lines = (run_dir / "metrics.jsonl").read_text(encoding="utf-8").splitlines()
+plt.plot([json.loads(line)["loss"] for line in lines])
+plt.savefig(run_dir / "loss.png")
+"""
 # A developer's signing key does not fit the identity these tests commit with.
 UNSIGNED = ("-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false")
 NOTEBOOK = {
@@ -201,6 +224,35 @@ def test_sweep_named_as_readme_says_gives_each_job_its_run_directory(project):
     # Hydra's sweep folder lands at the root, where git ignores it.
     assert (project / "multirun").is_dir()
     assert not (project / "scripts" / "multirun").exists()
+
+
+@pytest.fixture
+def script(project: Path) -> Iterator[Path]:
+    """Name a one-off script in `scripts/` and remove it for the tests that follow."""
+    path = project / "scripts" / "plot_loss.py"
+    yield path
+    path.unlink(missing_ok=True)
+
+
+def test_script_that_declares_its_own_dependency_passes_lint_and_typecheck(script):
+    script.write_text(FIGURE_SCRIPT, encoding="utf-8")
+
+    sh(script.parents[1], "make", "lint", "typecheck")
+
+
+def test_type_error_in_script_still_fails_typecheck(script):
+    script.write_text('"""Count."""\n\ncount: int = "three"\n', encoding="utf-8")
+
+    result = subprocess.run(
+        ["make", "typecheck"],
+        cwd=script.parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "plot_loss.py" in result.stdout
 
 
 def test_generated_configs_match_their_schemas(project):

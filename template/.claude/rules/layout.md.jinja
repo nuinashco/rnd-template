@@ -47,9 +47,10 @@ script in another.
   on: `make` or CI runs it, it is rerun whenever its inputs change, its output is committed or checked by a test, or
   the README documents it for users.
 - A file in `scripts/` is exploratory or one-time: a number or figure for a note, an idea being tried, a paper result
-  reproduced once. It is Python or shell and never imported. It may import the package and compose `configs/` with
-  Hydra; a script that makes runs starts them as commands do (RUN-1). A dependency only a script needs goes in the
-  `dev` group (`uv add --dev <name>`), so that pyright and the next reader find it.
+  reproduced once. It is Python or shell, never imported, and free to declare its own extra dependencies with PEP 723
+  inline metadata; uv then runs it apart from the project, so one that also imports the package is started with
+  `uv run --with-editable . scripts/<name>.py`. It may import the package and compose `configs/` with Hydra; a script
+  that makes runs starts them as commands do (RUN-1).
 - Either way, logic that more than one entry point needs lives in the package, and the entry point only wires it
   (ARC-3).
 - When a script is rerun, shared or needs a test, it becomes a `cli/` command.
@@ -63,7 +64,8 @@ script in another.
 *Why:* commands inside the package are importable, so they are tested in process (click's `CliRunner`, Hydra's
 `compose`) and sit in the import-layer contract; one-off scripts stay out of the package and its API.
 
-*Check:* review; ruff and pyright cover `scripts/` too.
+*Check:* review; ruff and pyright cover `scripts/` too, except that pyright leaves an import it cannot resolve there
+alone: a script's own dependencies are not installed in the project.
 
 ### ENV-1 MUST
 

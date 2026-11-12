@@ -111,6 +111,8 @@ include = ["src", "tests", "scripts"]
 typeCheckingMode = "standard"
 venvPath = "."
 venv = ".venv"
+# A script may declare dependencies of its own (LAY-7), which the project does not install.
+executionEnvironments = [{ root = "scripts", reportMissingImports = false }]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
