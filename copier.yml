@@ -1,6 +1,6 @@
 # Copier template for R&D projects built on nuikit and the nuinashco conventions.
 #
-#   uvx copier copy --trust gh:nuinashco/rnd-template my-project
+#   uvx copier copy gh:nuinashco/rnd-template my-project
 #   uvx copier update --trust                  # inside a generated project
 #
 # The project's files live in template/. `--trust` lets the migrations below run. A project made
@@ -16,7 +16,25 @@ _envops:
   keep_trailing_newline: true
 
 _migrations:
-  # 1.0.0 depends on nuikit and the conventions plugin instead of copying them in.
+  # 1.0.0 holds the rnd project only, and depends on nuikit and the conventions plugin instead of
+  # copying them in. Before anything changes, the first command stops in a uni or lab project and
+  # says in the others what goes: copier deletes the copies, local edits included. The second
+  # clears what copier left of them.
+  - version: "1.0.0"
+    when: "{{ _stage == 'before' }}"
+    command:
+      - "{{ _copier_python }}"
+      - -c
+      - |
+        import sys, yaml
+        with open("{{ _copier_conf.answers_file }}", encoding="utf-8") as answers:
+            profile = yaml.safe_load(answers).get("profile", "rnd")
+        if profile != "rnd":
+            sys.exit(f"error: rnd-template 1.0.0 has no {profile} profile, so this project stays "
+                     "on the release it was made from; nothing was changed")
+        print("1.0.0 removes src/nuikit, tests/nuikit, CONVENTIONS.md and the two subagents in "
+              ".claude/agents, local edits included: nuikit and the plugins bring them now. "
+              "`git checkout HEAD -- <path>` brings one back before you commit.")
   - version: "1.0.0"
     command:
       - "{{ _copier_python }}"

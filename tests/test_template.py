@@ -7,11 +7,13 @@ import os
 import re
 import shutil
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 import yaml
 from copier import run_copy, run_update
+from copier.errors import TaskError
 
 VARIANTS = {
     "defaults": {},
@@ -29,6 +31,7 @@ SETTINGS = {
     },
     "enabledPlugins": {"conventions@nuinashco": True, "nuikit@nuinashco": True},
 }
+OLD_RELEASE = "v0.3.4"  # The last release before 1.0.0, which still copied nuikit in.
 # What projects made before 1.0.0 carried as copies, and its 1.0.0 migration removes.
 VENDORED = [
     "src/nuikit/__init__.py",
@@ -63,19 +66,36 @@ def template(
     return src
 
 
+@pytest.fixture(scope="module", autouse=True)
+def git_identity() -> Iterator[None]:
+    """Name a committer for the repos the tests make: a CI machine has none."""
+    with pytest.MonkeyPatch.context() as patch:
+        for var in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
+            patch.setenv(var, "template test")
+        for var in ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"):
+            patch.setenv(var, "test@example.com")
+        yield
+
+
 @pytest.fixture(scope="module")
-def checkouts() -> dict[str, str]:
-    """Return the answers that point the project at local nuikit and conventions."""
-    paths = {answer: os.environ.get(var, "") for answer, var in CHECKOUTS.items()}
-    if not all(paths.values()):
-        pytest.skip(
-            "set NUIKIT_PATH and CONVENTIONS_PATH to checkouts of nuinashco/nuikit "
-            "and nuinashco/conventions: generated projects install both from there"
-        )
-    return {
-        answer: f"{{ path = {json.dumps(str(Path(path).expanduser().resolve()))} }}"
-        for answer, path in paths.items()
-    }
+def sources() -> dict[str, str]:
+    """Return the answers that install nuikit and conventions-hooks from checkouts.
+
+    NUIKIT_PATH and CONVENTIONS_PATH name them. Without a variable there is no
+    answer, and the project installs the release the template pins, as a user's does.
+    """
+    paths = {answer: os.environ.get(var) for answer, var in CHECKOUTS.items()}
+    return {answer: local_source(Path(path)) for answer, path in paths.items() if path}
+
+
+def local_source(checkout: Path) -> str:
+    """Return the uv source that installs `checkout` as it is on disk.
+
+    Editable, because uv rebuilds a plain path source only when its pyproject.toml
+    changes, and would keep installing code from before the last edit.
+    """
+    path = json.dumps(str(checkout.expanduser().resolve()))
+    return f"{{ path = {path}, editable = true }}"
 
 
 @pytest.fixture(scope="module", params=VARIANTS, ids=list(VARIANTS))
@@ -86,13 +106,13 @@ def variant(request: pytest.FixtureRequest) -> dict[str, object]:
 @pytest.fixture(scope="module")
 def project(
     template: Path,
-    checkouts: dict[str, str],
+    sources: dict[str, str],
     variant: dict[str, object],
     tmp_path_factory: pytest.TempPathFactory,
 ) -> Path:
-    """Render the variant against the local checkouts and install it."""
+    """Render the variant and install it."""
     dst = render(
-        template, tmp_path_factory.mktemp("project") / "demo", **checkouts, **variant
+        template, tmp_path_factory.mktemp("project") / "demo", **sources, **variant
     )
     sh(dst, "uv", "sync")
     return dst
@@ -208,23 +228,42 @@ def test_agents_file_stays_within_sixty_lines(rendered):
     assert len(lines) <= 60
 
 
-@pytest.fixture
-def releases(template: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Return a git copy of the template tagged v0.9.0 and, one commit later, v1.0.0.
+def test_make_lint_uses_conventions_release_that_projects_get(pytestconfig):
+    root = pytestconfig.rootpath
+    questions = yaml.safe_load((root / "copier.yml").read_text(encoding="utf-8"))
+    pinned = re.findall(r'tag = "(.+)"', questions["hooks_source"]["default"])
 
-    Migrations come from the release updated to, so both commits can hold the
-    working tree.
-    """
-    for var in ("GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"):
-        monkeypatch.setenv(var, "template test")
-    for var in ("GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"):
-        monkeypatch.setenv(var, "test@example.com")
+    used = re.findall(r"conventions@(\S+)\)", (root / "Makefile").read_text("utf-8"))
+
+    assert used == pinned
+
+
+@pytest.fixture
+def releases(template: Path, tmp_path: Path) -> Path:
+    """Return a git copy of the template whose only release, v1.0.0, is this tree."""
     repo = tmp_path / "rnd-template"
     shutil.copytree(template, repo)
     sh(repo, "git", "init", "-q")
-    for tag in ("v0.9.0", "v1.0.0"):
-        commit(repo, f"chore: release {tag}")
-        sh(repo, "git", "tag", tag)
+    commit(repo, "chore: release v1.0.0")
+    sh(repo, "git", "tag", "v1.0.0")
+    return repo
+
+
+@pytest.fixture
+def history(pytestconfig: pytest.Config, template: Path, tmp_path: Path) -> Path:
+    """Return a clone of this repo whose newest release, v999.0.0, is this tree.
+
+    The clone brings the real release tags, so a project can start from v0.3.4, the
+    last release before 1.0.0, and update across it.
+    """
+    repo = tmp_path / "rnd-template"
+    sh(pytestconfig.rootpath, "git", "clone", "-q", ".", str(repo))
+    assert OLD_RELEASE in sh(repo, "git", "tag").split(), "run `git fetch --tags`"
+    shutil.rmtree(repo / "template")
+    shutil.copytree(template / "template", repo / "template")
+    shutil.copy(template / "copier.yml", repo)
+    commit(repo, "chore: release working tree")
+    sh(repo, "git", "tag", "v999.0.0")
     return repo
 
 
@@ -234,43 +273,62 @@ def commit(repo: Path, message: str) -> None:
 
 
 def update(project: Path, **data: object) -> None:
-    """Update the project to the latest release, v1.0.0, as `copier update` would."""
+    """Update the project to the newest release, as `copier update --trust` would."""
     run_update(
         project, data=data, defaults=True, overwrite=True, unsafe=True, quiet=True
     )
 
 
-def made_before_1_0_0(releases: Path, dst: Path) -> Path:
-    """Render a project as releases before 1.0.0 left it: copies, a profile answer."""
-    render(releases, dst, vcs_ref="v0.9.0", example=False)
-    answers_file = dst / ".copier-answers.yml"
-    answers = yaml.safe_load(answers_file.read_text(encoding="utf-8"))
-    del answers["example"]
-    answers["profile"] = "rnd"
-    answers_file.write_text(yaml.safe_dump(answers), encoding="utf-8")
-    for path in VENDORED:
-        (dst / path).parent.mkdir(parents=True, exist_ok=True)
-        (dst / path).write_text("# Copied in before 1.0.0.\n", encoding="utf-8")
+def made_from_old_release(history: Path, dst: Path, *, profile: str = "rnd") -> Path:
+    """Render a project from the last release before 1.0.0 and commit it."""
+    render(history, dst, vcs_ref=OLD_RELEASE, profile=profile)
     commit(dst, "chore: start project")
     return dst
 
 
-def test_update_across_1_0_0_removes_formerly_vendored_files(releases, tmp_path):
-    project = made_before_1_0_0(releases, tmp_path / "old")
+def test_update_from_old_release_removes_vendored_copies_and_says_so(
+    history, tmp_path, capfd
+):
+    project = made_from_old_release(history, tmp_path / "old")
+    carried = [path for path in VENDORED if (project / path).exists()]
 
     update(project)
 
-    assert [path for path in VENDORED if (project / path).exists()] == []
+    left = [path for path in VENDORED if (project / path).exists()]
+    assert (carried, left) == (VENDORED, [])
+    assert "1.0.0 removes src/nuikit" in capfd.readouterr().out
 
 
-def test_update_across_1_0_0_leaves_example_out_of_existing_project(releases, tmp_path):
-    project = made_before_1_0_0(releases, tmp_path / "old")
+def test_update_from_old_release_leaves_example_out(history, tmp_path):
+    project = made_from_old_release(history, tmp_path / "old")
 
     update(project)
 
     answers = yaml.safe_load((project / ".copier-answers.yml").read_text("utf-8"))
     present = [path for path in EXAMPLE if (project / path).exists()]
     assert (answers["example"], present) == (False, [])
+
+
+def test_project_updated_from_old_release_passes_make_check(history, sources, tmp_path):
+    project = made_from_old_release(history, tmp_path / "old")
+
+    update(project, **sources)
+
+    sh(project, "uv", "sync")
+    sh(project, "make", "check")
+
+
+@pytest.mark.parametrize("profile", ["uni", "lab"])
+def test_update_of_uni_or_lab_project_is_refused_and_changes_nothing(
+    history, tmp_path, capfd, profile
+):
+    project = made_from_old_release(history, tmp_path / "old", profile=profile)
+
+    with pytest.raises(TaskError):
+        update(project)
+
+    assert sh(project, "git", "status", "--porcelain") == ""
+    assert f"has no {profile} profile" in capfd.readouterr().err
 
 
 def test_update_without_example_removes_example_domain(releases, tmp_path):
