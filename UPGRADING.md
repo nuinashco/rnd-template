@@ -35,8 +35,9 @@ the `pyproject.toml` line was left as it was, the update marks one conflict unde
   both go as well. Imports of `<package>.core` become imports of `nuikit`, except `<package>.core.paths`, which is
   `<package>.paths` now. `<Package>Error` is `nuikit.errors.UserError`, and `start_run` takes
   `runs_dir=<package>.paths.RUNS_DIR` (and `repo=<package>.paths.ROOT`) explicitly.
-- **`data`, `runs`, `outputs`, `multirun`, `build` and `dist` are ignored at the top level only.** A folder of that
-  name under `src/` or `tests/` shows up in `git status` after the update: commit it, or ignore it yourself.
+- **`data`, `runs`, `outputs`, `multirun`, `build`, `dist` and, in a project with W&B, `wandb` are ignored at the top
+  level only.** A folder of that name elsewhere, such as `src/<package>/data/` or the `wandb/` that `wandb.init()`
+  makes beside a notebook, shows up in `git status` after the update: commit it, or ignore it yourself.
 - **ruff checks two more things:** every signature in `src/` is annotated (ANN, TYP-1) and a `# noqa` names its rule
   (PGH004); `make check` lists what to fix.
 - **No example is added** to a project that already exists.

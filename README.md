@@ -73,10 +73,10 @@ from the project root with a clean working tree:
 uvx copier update --defaults
 ```
 
-`--defaults` keeps the answers recorded in that file instead of asking again. Copier merges the template's changes
-with yours and marks conflicts inline, between `<<<<<<< before updating` and `>>>>>>> after updating`. Afterwards
-run `uv sync` and `make check`. A release that brings a migration, a script that changes the project, needs
-`uvx copier update --defaults --trust`: without it copier stops and says so.
+`--defaults` keeps the answers recorded in `.copier-answers.yml` instead of asking again. Copier merges the
+template's changes with yours and marks conflicts inline, between `<<<<<<< before updating` and
+`>>>>>>> after updating`. Afterwards run `uv sync` and `make check`. A release that brings a migration, a script
+that changes the project, needs `uvx copier update --defaults --trust`: without it copier stops and says so.
 
 A project made from a release before 1.0.0 needs two edits first, and the update removes what those releases
 copied into it: [UPGRADING.md](UPGRADING.md) has the steps.
