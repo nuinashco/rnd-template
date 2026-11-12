@@ -39,6 +39,9 @@ A cloud session loads no plugins; there AGENTS.md sends Claude to the rules inst
    argv, start time) and the run's outputs.
 {% endif %}
 3. Before committing: `make check`.
+
+A sweep needs a run name that differs for each job:
+`uv run {{ cli }}-run -m seed=1,2,3 'run_name=sweep_${hydra:job.num}'`.
 {% if use_wandb %}
 
 To mirror a run to Weights & Biases, add `tracker=wandb`. Log in once with `uv run wandb login`, or put

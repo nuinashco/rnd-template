@@ -1,4 +1,5 @@
-# Hydra's own settings: Hydra writes nothing; the app creates runs/<run_name>/ itself.
+# Hydra's own settings: a run gets no Hydra files; the app creates runs/<run_name>/ itself.
+# A sweep (`-m`) still writes its multirun.yaml under multirun/, which git ignores.
 defaults:
   - override hydra_logging: disabled
   - override job_logging: disabled

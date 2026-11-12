@@ -190,6 +190,16 @@ def test_run_command_writes_run_directory_with_outputs(project, variant):
     assert written == {"config.yaml", "run.json", *outputs}
 
 
+def test_sweep_named_as_readme_says_gives_each_job_its_run_directory(project):
+    name = "run_name=sweep_${hydra:job.num}"
+    assert name in (project / "README.md").read_text(encoding="utf-8")
+
+    sh(project, "uv", "run", "demo-run", "-m", "seed=1,2", name)
+
+    assert (project / "runs" / "sweep_0" / "run.json").is_file()
+    assert (project / "runs" / "sweep_1" / "run.json").is_file()
+
+
 def test_generated_configs_match_their_schemas(project):
     sh(project, "uv", "run", "demo-configs", "--check")
 
@@ -258,7 +268,8 @@ def test_template_rules_are_path_scoped_and_shaped_as_rules(rendered):
 def test_gitignore_ignores_top_level_folders_and_keeps_packages_named_like_them(
     rendered,
 ):
-    paths = ["data/raw.csv", "runs/first/run.json", "dist/demo.whl"]
+    # `data` and `runs` alone are what git sees of a symlink to another disk.
+    paths = ["data/raw.csv", "runs/first/run.json", "dist/demo.whl", "data", "runs"]
     packages = ["src/demo/data/loaders.py", "tests/demo/runs/test_latest.py"]
 
     ignored = sh(rendered, "git", "check-ignore", *paths, *packages).split()

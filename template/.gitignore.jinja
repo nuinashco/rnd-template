@@ -23,13 +23,14 @@ htmlcov/
 .vscode/
 
 # Builds, Hydra's own outputs, run outputs and local data. The leading slash keeps these to
-# the top level, so a package named `data` or `runs` under src/ or tests/ stays in git.
+# the top level, so a package named `data` or `runs` under src/ or tests/ stays in git. The
+# last four have no trailing slash, so a symlink to another disk is ignored as well.
 /build/
 /dist/
-/outputs/
-/multirun/
-/runs/
-/data/
+/outputs
+/multirun
+/runs
+/data
 {% if use_wandb %}
 
 # Weights & Biases, wherever a run starts
