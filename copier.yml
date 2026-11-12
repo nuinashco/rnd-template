@@ -25,18 +25,14 @@ _migrations:
     when: "{{ _stage == 'before' }}"
     command:
       - "{{ _copier_python }}"
-      - "{{ _copier_conf.src_path }}/migrations/before_1_0_0.py"
+      - "{{ _copier_conf.src_path }}/migrations/to_1_0_0.py"
+      - before
       - "{{ _copier_conf.answers_file }}"
   - version: "1.0.0"
     command:
       - "{{ _copier_python }}"
-      - -c
-      - >-
-        import pathlib, shutil;
-        paths = ['src/nuikit', 'tests/nuikit', 'CONVENTIONS.md',
-        '.claude/agents/conventions-reviewer.md', '.claude/agents/descriptions-judge.md'];
-        [shutil.rmtree(p) if p.is_dir() else p.unlink()
-        for p in map(pathlib.Path, paths) if p.exists()]
+      - "{{ _copier_conf.src_path }}/migrations/to_1_0_0.py"
+      - after
 
 project_name:
   type: str
