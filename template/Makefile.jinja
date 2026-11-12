@@ -1,8 +1,10 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup github lint format typecheck test test-integration configs lint-imports check
 # Every Python file git does not ignore, NUL-separated so that a name with a space or a
-# letter outside ASCII reaches the checks whole.
-PYTHON_FILES = git ls-files -z -co --exclude-standard '*.py'
+# letter outside ASCII reaches the checks whole. Git lists a deleted file until the deletion
+# is committed, as after `copier update`; the loop leaves it out.
+PYTHON_FILES = git ls-files -z -co --exclude-standard '*.py' \
+	| xargs -0 sh -c 'for f; do if [ -f "$$f" ]; then printf "%s\0" "$$f"; fi; done' sh
 
 help:  ## show targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'

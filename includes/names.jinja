@@ -45,30 +45,33 @@
 {#
   Each macro gives the reason `name` is refused, or nothing. Copier prints the reason after up to
   46 characters of its own and cuts the line off at the terminal's width, so a reason is short.
-  A project that exists keeps a name only style speaks against: `copier update` must not stop
-  on it.
+  A project that exists keeps any name that every release before 1.0.0 took (the first branch
+  of each): `copier update` drops a recorded answer its validator refuses and quietly takes the
+  folder's name instead.
 #}
 {% macro project_refusal(name, existing=false) %}
-{% if not (name | regex_search('^[a-z]([a-z0-9-]*[a-z0-9])?$')) %}
+{% if existing and name | regex_search('^[a-z][a-z0-9-]*$') %}
+{% elif not (name | regex_search('^[a-z]([a-z0-9-]*[a-z0-9])?$')) %}
 use kebab-case, like my-project
 {% elif name | replace('-', '_') in installed %}
 a dependency's name; pick another
-{% elif not existing and name | length > 50 %}
+{% elif name | length > 50 %}
 use at most 50 characters
 {% endif %}
 {% endmacro %}
 
 {# 27 characters keep every generated line within 88 columns, as 50 do for the project's name. #}
 {% macro package_refusal(name, existing=false) %}
-{% if not (name | regex_search('^[a-z][a-z0-9_]*$')) %}
+{% if existing and name | regex_search('^[a-z][a-z0-9_]*$') %}
+{% elif not (name | regex_search('^[a-z][a-z0-9_]*$')) %}
 use snake_case, like my_project
 {% elif name in keywords %}
 a Python keyword; pick another name
 {% elif name in stdlib or name in installed or name in reserved %}
 hides a module; pick another name
-{% elif not existing and name | length > 27 %}
+{% elif name | length > 27 %}
 use at most 27 characters
-{% elif not existing and name in vague %}
+{% elif name in vague %}
 too vague (LAY-2); name what it does
 {% endif %}
 {% endmacro %}

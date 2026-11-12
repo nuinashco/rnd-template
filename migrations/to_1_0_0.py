@@ -51,13 +51,16 @@ def before(answers_file: str, release: str) -> None:
 
 
 def after(answers_file: str, release: str) -> None:
-    """Remove what copier left of the copies; a file git ignores there stays."""
+    """Remove what copier left of the copies; a file git ignores there stays.
+
+    A copy that is a symlink goes as a link: nothing in its target is touched.
+    """
     answers = yaml.safe_load(Path(answers_file).read_text(encoding="utf-8"))
     for path in copies(answers, release):
-        if path.is_dir():
-            clear(path)
-        elif path.exists():
+        if path.is_symlink() or path.is_file():
             path.unlink()
+        elif path.is_dir():
+            clear(path)
 
 
 def copies(answers: dict[str, object], release: str) -> list[Path]:
@@ -69,13 +72,18 @@ def copies(answers: dict[str, object], release: str) -> list[Path]:
 
 
 def clear(folder: Path) -> None:
-    """Delete the folder, except the files in it that only this machine has."""
+    """Delete the folder, except the files in it that only this machine has.
+
+    A kept folder stays whole, and a symlink goes as a link.
+    """
     kept = ignored(folder)
     for item in sorted(folder.rglob("*"), reverse=True):
+        if any(path == item or path in item.parents for path in kept):
+            continue
         if item.is_dir() and not item.is_symlink():
             if not any(item.iterdir()):
                 item.rmdir()
-        elif item not in kept:
+        else:
             item.unlink()
     if kept:
         print(KEPT.format(folder=folder, names=", ".join(sorted(map(str, kept)))))
@@ -86,7 +94,8 @@ def clear(folder: Path) -> None:
 def ignored(folder: Path) -> set[Path]:
     """Return the files in `folder` that git ignores, bytecode caches aside.
 
-    Git has no copy of an ignored file, so nothing could bring it back.
+    Git has no copy of an ignored file, so nothing could bring it back. It names a
+    nested repository by its folder.
     """
     command = ("git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z")
     listed = subprocess.run(

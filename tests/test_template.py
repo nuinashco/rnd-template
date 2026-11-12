@@ -44,6 +44,7 @@ MODULES = (
     "import json; from importlib.metadata import packages_distributions as found; "
     "print(json.dumps(found()))"
 )
+STDLIB = "import json, sys; print(json.dumps(sorted(sys.stdlib_module_names)))"
 # Answers that once broke the render: quotes and a backslash for TOML, letters outside
 # ASCII and more than a line's worth of text for the package docstring.
 AWKWARD = {
@@ -234,6 +235,34 @@ def test_run_command_writes_run_directory_with_outputs(project, variant):
     assert written == {"config.yaml", "run.json", *outputs}
 
 
+def test_run_with_negative_seed_exits_with_config_error_that_names_seed(project):
+    result = subprocess.run(
+        ["uv", "run", "demo-run", "seed=-1"],
+        cwd=project,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "  seed: " in result.stderr
+
+
+@pytest.fixture
+def head(project: Path) -> Iterator[str]:
+    """Give the project a first commit and return its SHA; take it back afterwards."""
+    sh(project, "git", *UNSIGNED, "commit", "-q", "--allow-empty", "-m", "chore: start")
+    yield sh(project, "git", "rev-parse", "HEAD").strip()
+    sh(project, "git", "update-ref", "-d", "HEAD")
+
+
+def test_run_started_outside_project_records_commit_of_project(project, head, tmp_path):
+    sh(tmp_path, "uv", "run", "--project", str(project), "demo-run", "run_name=away")
+
+    run = json.loads((project / "runs" / "away" / "run.json").read_text("utf-8"))
+    assert run["git_sha"] == head
+
+
 def test_sweep_named_as_readme_says_gives_each_job_its_run_directory(project):
     name = "run_name=sweep_${hydra:job.num}"
     assert name in (project / "README.md").read_text(encoding="utf-8")
@@ -318,6 +347,30 @@ def test_lint_names_what_module_breaks(module, source, finding):
 
     assert result.returncode != 0
     assert finding in result.stdout
+
+
+@pytest.fixture
+def deleted(project: Path) -> Iterator[Path]:
+    """Track a module, then delete it as an update does before the user commits."""
+    path = project / "src" / "demo" / "retired.py"
+    path.write_text('"""Retired."""\n', encoding="utf-8")
+    sh(project, "git", "add", str(path))
+    path.unlink()
+    yield path
+    sh(project, "git", "rm", "-q", "--cached", str(path))
+
+
+def test_lint_says_nothing_of_tracked_module_deleted_from_working_tree(deleted):
+    result = subprocess.run(
+        ["make", "lint"],
+        cwd=deleted.parents[2],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert deleted.name not in result.stdout + result.stderr
 
 
 def test_integration_target_passes_while_no_test_carries_its_marker(project):
@@ -588,8 +641,12 @@ def names(pytestconfig: pytest.Config) -> object:
     return env.get_template("includes/names.jinja").module
 
 
-def test_no_module_of_standard_library_is_accepted_as_package(names):
-    modules = sorted(filter(PACKAGE.fullmatch, sys.stdlib_module_names))
+@pytest.mark.parametrize("python", ["3.12", "3.13", "3.14"])
+def test_no_module_of_standard_library_is_accepted_as_package(names, tmp_path, python):
+    found = sh(
+        tmp_path, "uv", "run", "--no-project", "-p", python, "python", "-c", STDLIB
+    )
+    modules = sorted(filter(PACKAGE.fullmatch, json.loads(found)))
 
     accepted = [name for name in modules if not str(names.package_refusal(name))]
 
@@ -728,9 +785,14 @@ def test_update_keeps_files_in_copies_that_git_ignores_and_names_them(
     project = made_from_old_release(history, tmp_path / "old")
     ignored = {
         "src/nuikit/.env": "TOKEN=only-here\n",
+        "src/nuikit/scratch/notes.md": "Only here.\n",
         "tests/nuikit/__pycache__/test_config.pyc": "",
     }
     write(project, ignored)
+    # Git lists a nested repo it ignores as one folder, not file by file.
+    sh(project / "src" / "nuikit" / "scratch", "git", "init", "-q")
+    with (project / ".git" / "info" / "exclude").open("a", encoding="utf-8") as file:
+        file.write("src/nuikit/scratch/\n")
 
     update(project, trust=True)
 
@@ -738,10 +800,36 @@ def test_update_keeps_files_in_copies_that_git_ignores_and_names_them(
         str(path.relative_to(project))
         for folder in ("src/nuikit", "tests/nuikit")
         for path in (project / folder).rglob("*")
+        if ".git" not in path.parts
     )
-    assert left == ["src/nuikit/.env"]
-    assert "kept in src/nuikit, since git ignores them: src/nuikit/.env" in (
-        capfd.readouterr().out
+    assert left == [
+        "src/nuikit/.env",
+        "src/nuikit/scratch",
+        "src/nuikit/scratch/notes.md",
+    ]
+    assert (project / "src" / "nuikit" / "scratch" / ".git" / "HEAD").is_file()
+    assert (
+        "kept in src/nuikit, since git ignores them: "
+        "src/nuikit/.env, src/nuikit/scratch"
+    ) in capfd.readouterr().out
+
+
+def test_update_unlinks_copy_that_is_symlink_and_leaves_its_target_alone(
+    history, tmp_path
+):
+    target = tmp_path / "checkout"
+    write(target, {"wip.py": '"""Work in progress."""\n'})
+    project = render(history, tmp_path / "old", vcs_ref=OLD_RELEASE, profile="rnd")
+    shutil.rmtree(project / "src" / "nuikit")
+    (project / "src" / "nuikit").symlink_to(target)
+    commit(project, "chore: start project")
+
+    update(project, trust=True)
+
+    assert not (project / "src" / "nuikit").exists(follow_symlinks=False)
+    assert [path.name for path in target.iterdir()] == ["wip.py"]
+    assert (target / "wip.py").read_text(encoding="utf-8") == (
+        '"""Work in progress."""\n'
     )
 
 
@@ -824,17 +912,30 @@ def test_project_updated_from_old_release_passes_make_check(history, sources, tm
     sh(project, "make", "check")
 
 
-@pytest.mark.parametrize("name", [LONGEST_NAME + "x", "helpers"], ids=["long", "vague"])
-def test_update_keeps_name_that_new_project_could_not_take(history, tmp_path, name):
-    project = made_from_old_release(history, tmp_path / "old", project_name=name)
+@pytest.mark.parametrize(
+    ("project_name", "package"),
+    [
+        (LONGEST_NAME + "x", LONGEST_NAME.replace("-", "_") + "x"),
+        ("helpers", "helpers"),
+        ("p" * 51, "demo"),
+        ("requests", "requests"),
+        ("lab-", "lab_"),
+    ],
+    ids=["long-package", "vague", "long-project", "dependency", "trailing-dash"],
+)
+def test_update_keeps_name_that_new_project_could_not_take(
+    history, tmp_path, project_name, package
+):
+    # In a folder of another name: copier drops an answer its validator refuses and
+    # would take the folder's name instead.
+    names = {"project_name": project_name, "package": package}
+    project = made_from_old_release(history, tmp_path / "old", **names)
 
     update(project, trust=True)
 
     answers = answers_of(project)
-    assert (answers["_commit"], answers["package"]) == (
-        "v999.0.0",
-        name.replace("-", "_"),
-    )
+    kept = {question: answers[question] for question in names}
+    assert (answers["_commit"], kept) == ("v999.0.0", names)
 
 
 @pytest.mark.parametrize("profile", ["uni", "lab"])

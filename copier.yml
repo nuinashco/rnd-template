@@ -59,7 +59,7 @@ package:
     | replace('-', '_') %}{{
     name if _copier_conf.defaults or not package_refusal(name) | trim else UNSET }}
   # An update runs with `overwrite` on, a first copy without: that is how the two macros tell
-  # a project that exists, which keeps a long or vague name, from a new one.
+  # a project that exists, which keeps any name an earlier release took, from a new one.
   validator: >-
     {% from 'includes/names.jinja' import package_refusal %}{{
     package_refusal(package, _copier_conf.overwrite) }}
