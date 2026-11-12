@@ -26,7 +26,7 @@ NOTICE = (
     "now. Until you commit the update, `git show HEAD:<path>` prints one, so you can "
     "move a change into your own package."
 )
-KEPT = "kept in {folder}, since git ignores them: {names}"
+KEPT = "kept in {folder}, since git has no copy of them: {names}"
 # What releases before 1.0.0 copied into a project.
 COPIES = (
     "src/nuikit",
@@ -55,7 +55,7 @@ def before(answers_file: str, release: str) -> None:
 
 
 def after(answers_file: str, release: str) -> None:
-    """Remove what copier left of the copies; a file git ignores there stays.
+    """Remove what copier left of the copies; a file git has no copy of stays.
 
     A copy that is a symlink goes as a link: nothing in its target is touched.
     """
@@ -68,11 +68,15 @@ def after(answers_file: str, release: str) -> None:
 
 
 def copies(answers: dict[str, object], release: str) -> list[Path]:
-    """Return where `release` put its copies in a project with these answers."""
+    """Return where `release` put its copies in a project with these answers.
+
+    A copy below a symlinked folder is left out: the migration never follows a symlink.
+    """
     named = list(COPIES)
     if release.removeprefix("v").startswith("0.1."):
         named += [path.format(package=answers.get("package")) for path in FIRST_COPIES]
-    return [Path(path) for path in named]
+    paths = [Path(path) for path in named]
+    return [path for path in paths if not any(map(Path.is_symlink, path.parents))]
 
 
 def clear(folder: Path) -> None:
@@ -96,12 +100,13 @@ def clear(folder: Path) -> None:
 
 
 def ignored(folder: Path) -> set[Path]:
-    """Return the files in `folder` that git ignores, bytecode caches aside.
+    """Return the files in `folder` that git has no copy of, bytecode caches aside.
 
-    Git has no copy of an ignored file, so nothing could bring it back. Git names a
-    nested repository it ignores by its folder, not file by file.
+    Nothing could bring them back. The tree is clean before an update, so they are the
+    files the old .gitignore ignored, whatever the new one says. Git names a nested
+    repository by its folder, not file by file.
     """
-    command = ("git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z")
+    command = ("git", "ls-files", "--others", "-z")
     listed = subprocess.run(
         [*command, "--", str(folder)], capture_output=True, text=True, check=True
     ).stdout

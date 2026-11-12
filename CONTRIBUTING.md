@@ -38,10 +38,11 @@ a retired one.
   `{% if example %}` leaves nothing behind when the example is off, including import layers and docs.
 - Generated YAML in `template/configs/` matches what nuikit's `configgen` writes: render a project, run
   `make configs` and copy the output back.
-- `copier update` keeps working on existing projects: no renamed questions, a migration in `copier.yml` for
-  every file a release stops shipping, and no new refusal of an answer a project already has. The name questions
-  show how: a check that only style asks for is skipped when `_copier_conf.overwrite` is set, as it is in an
-  update.
+- `copier update` keeps working on existing projects: no renamed questions, a migration in `copier.yml` for every file a
+  release stops shipping, and no new refusal of an answer a project already has. The name questions show how: when
+  `_copier_conf.overwrite` is set, as it is in an update, the first branch of each macro in `includes/names.jinja`
+  accepts any name an earlier release took, since copier drops a recorded answer its validator refuses and takes the
+  folder's name instead. A new refusal goes below that branch.
 - A dependency added to `template/pyproject.toml.jinja` adds its import and distribution names to `installed`
   in `includes/names.jinja`; a test names the ones that are missing.
 - Change nuikit or the conventions in their own repos. This one only pins their release tags: both in `copier.yml`

@@ -1,7 +1,7 @@
 # Copier template for R&D projects built on nuikit and the nuinashco conventions.
 #
 #   uvx copier copy gh:nuinashco/rnd-template my-project
-#   uvx copier update                          # inside a generated project
+#   uvx copier update --defaults               # inside a generated project
 #
 # The project's files live in template/. An update that runs one of the migrations below needs
 # `--trust`. A project made before 1.0.0 first replaces nuinashco/conventions with
@@ -21,7 +21,7 @@ _migrations:
   # 1.0.0 holds the rnd project only, and depends on nuikit and the conventions plugin instead of
   # copying them in. Before anything changes, the first command stops in a uni or lab project and
   # says in the others what goes: copier deletes the copies, local edits included. The second
-  # clears what copier left of them, except files git ignores.
+  # clears what copier left of them, except files git has no copy of.
   - version: "1.0.0"
     when: "{{ _stage == 'before' }}"
     command:
@@ -40,12 +40,14 @@ _migrations:
 
 project_name:
   type: str
-  help: Distribution name, kebab-case (e.g. llm-eval-launcher)
-  # The folder's name, made kebab-case. Copier checks a default before it asks, so a name it would
-  # refuse is offered only under --defaults, where the refusal is the answer.
+  help: Distribution name, kebab-case, at most 50 characters (e.g. llm-eval-launcher)
+  # The folder's name, made kebab-case; one with a letter outside ASCII stays as it is, rather
+  # than lose the letter. Copier checks a default before it asks, so a name it would refuse is
+  # offered only under --defaults, where the refusal is the answer.
   default: >-
-    {% from 'includes/names.jinja' import project_refusal %}{% set name = _copier_conf.dst_path
-    | realpath | basename | lower | regex_replace('[^a-z0-9]+', '-') | trim('-') %}{{
+    {% from 'includes/names.jinja' import project_refusal %}{% set folder = _copier_conf.dst_path
+    | realpath | basename | lower %}{% set name = folder | regex_replace('[^a-z0-9]+', '-')
+    | trim('-') if folder.isascii() else folder %}{{
     name if _copier_conf.defaults or not project_refusal(name) | trim else UNSET }}
   validator: >-
     {% from 'includes/names.jinja' import project_refusal %}{{
@@ -53,7 +55,7 @@ project_name:
 
 package:
   type: str
-  help: Import name of the package
+  help: Import name of the package, snake_case, at most 27 characters
   default: >-
     {% from 'includes/names.jinja' import package_refusal %}{% set name = project_name
     | replace('-', '_') %}{{

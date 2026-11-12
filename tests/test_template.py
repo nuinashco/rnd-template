@@ -350,6 +350,59 @@ def test_lint_names_what_module_breaks(module, source, finding):
     assert finding in result.stdout
 
 
+def test_lint_reaches_file_whose_name_has_space(module, variant):
+    spaced = module.parents[2] / "scripts" / "plot one.py"
+    future = "from __future__ import annotations\n\n" if variant.get("python") else ""
+    spaced.write_text(
+        f'"""Plot one."""\n\n{future}# plots one run\nRUNS = 1\n', "utf-8"
+    )
+    try:
+        result = subprocess.run(
+            ["make", "lint"],
+            cwd=module.parents[2],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    finally:
+        spaced.unlink()
+
+    assert result.returncode != 0
+    assert "scripts/plot one.py:" in result.stdout
+    assert "DOC-5" in result.stdout
+
+
+def test_format_leaves_what_ruff_cannot_fix_to_lint(module):
+    module.write_text('"""Scaling."""\n\nSCALE = missing\n', encoding="utf-8")
+    project = module.parents[2]
+
+    formatted = subprocess.run(
+        ["make", "format"], cwd=project, capture_output=True, text=True, check=False
+    )
+    linted = subprocess.run(
+        ["make", "lint"], cwd=project, capture_output=True, text=True, check=False
+    )
+
+    assert formatted.returncode == 0, formatted.stdout + formatted.stderr
+    assert (linted.returncode, "F821" in linted.stdout) == (2, True)
+
+
+def test_lint_outside_git_repo_stops_and_says_so(project, tmp_path):
+    shutil.copy(project / "Makefile", tmp_path)
+
+    result = subprocess.run(
+        ["make", "lint"],
+        cwd=tmp_path,
+        env={**os.environ, "GIT_CEILING_DIRECTORIES": str(tmp_path.parent)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "not a git repository" in result.stderr
+
+
 @pytest.fixture
 def deleted(project: Path) -> Iterator[Path]:
     """Track a module, then delete it as an update does before the user commits."""
@@ -576,8 +629,9 @@ def test_project_is_named_after_its_folder_by_default(template, tmp_path, folder
     [
         ("2026-eval", ["eval-2026"], ("eval-2026", "eval_2026")),
         (LONGEST_NAME + "x", ["", "shorter"], (LONGEST_NAME + "x", "shorter")),
+        ("\u00dcber-Projekt", ["ueber-projekt"], ("ueber-projekt", "ueber_projekt")),
     ],
-    ids=["folder-starts-with-digit", "package-too-long"],
+    ids=["folder-starts-with-digit", "package-too-long", "folder-outside-ascii"],
 )
 def test_name_that_folder_cannot_give_is_asked_for_and_typed(
     template, tmp_path, folder, typed, names
@@ -814,6 +868,7 @@ def test_update_keeps_files_in_copies_that_git_ignores_and_names_them(
         "src/nuikit/.env": "TOKEN=only-here\n",
         "src/nuikit/scratch/notes.md": "Only here.\n",
         "tests/nuikit/__pycache__/test_config.pyc": "",
+        "tests/nuikit/data/sample.csv": "a,b\n",
     }
     write(project, ignored)
     # Git lists a nested repo it ignores as one folder, not file by file.
@@ -833,12 +888,19 @@ def test_update_keeps_files_in_copies_that_git_ignores_and_names_them(
         "src/nuikit/.env",
         "src/nuikit/scratch",
         "src/nuikit/scratch/notes.md",
+        "tests/nuikit/data",
+        "tests/nuikit/data/sample.csv",
     ]
     assert (project / "src" / "nuikit" / "scratch" / ".git" / "HEAD").is_file()
+    out = capfd.readouterr().out
     assert (
-        "kept in src/nuikit, since git ignores them: "
+        "kept in src/nuikit, since git has no copy of them: "
         "src/nuikit/.env, src/nuikit/scratch"
-    ) in capfd.readouterr().out
+    ) in out
+    assert (
+        "kept in tests/nuikit, since git has no copy of them: "
+        "tests/nuikit/data/sample.csv"
+    ) in out
 
 
 def test_update_unlinks_copy_that_is_symlink_and_leaves_its_target_alone(
@@ -859,6 +921,24 @@ def test_update_unlinks_copy_that_is_symlink_and_leaves_its_target_alone(
     assert (target / "wip.py").read_text(encoding="utf-8") == (
         '"""Work in progress."""\n'
     )
+
+
+def test_update_leaves_copies_in_symlinked_folder_alone(history, tmp_path):
+    shared = tmp_path / "shared"
+    project = render(history, tmp_path / "old", vcs_ref=OLD_RELEASE, profile="rnd")
+    shutil.copytree(project / ".claude" / "agents", shared)
+    write(shared, {"mine.md": "Mine.\n"})
+    shutil.rmtree(project / ".claude" / "agents")
+    (project / ".claude" / "agents").symlink_to(shared)
+    commit(project, "chore: start project")
+
+    update(project, trust=True)
+
+    assert sorted(path.name for path in shared.iterdir()) == [
+        "conventions-reviewer.md",
+        "descriptions-judge.md",
+        "mine.md",
+    ]
 
 
 def test_update_names_copy_that_is_broken_symlink_before_it_goes(
@@ -967,8 +1047,18 @@ def test_project_updated_from_old_release_passes_make_check(history, sources, tm
         ("p" * 51, "demo"),
         ("requests", "requests"),
         ("lab-", "lab_"),
+        ("pipes", "pipes"),
+        ("test", "test"),
     ],
-    ids=["long-package", "vague", "long-project", "dependency", "trailing-dash"],
+    ids=[
+        "long-package",
+        "vague",
+        "long-project",
+        "dependency",
+        "trailing-dash",
+        "module",
+        "test-package",
+    ],
 )
 def test_update_keeps_name_that_new_project_could_not_take(
     history, tmp_path, project_name, package

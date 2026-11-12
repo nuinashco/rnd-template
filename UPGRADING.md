@@ -30,7 +30,9 @@ the `pyproject.toml` line was left as it was, the update marks one conflict unde
 - **The copies old releases put in the project go:** `src/nuikit/`, `tests/nuikit/`, `CONVENTIONS.md` and the two
   subagents in `.claude/agents/`. nuikit is a dependency now, and the rules come with the plugins. Local edits to
   those files go too: until you commit the update, `git show HEAD:<path>` prints one, so you can move the change
-  into your own package. Files git ignores in those folders stay, and the update names them.
+  into your own package. Files git has no copy of in those folders, such as a `.env` or a nested repository, stay
+  whole, and the update names them. A copy that is a symlink goes as a link, and one in a symlinked folder stays:
+  nothing outside the project is touched.
 - **A project from v0.1.0** holds its copy as `src/<package>/core/`, with its tests in `tests/<package>/core/`:
   both go as well. Imports of `<package>.core` become imports of `nuikit`, except `<package>.core.paths`, which is
   `<package>.paths` now. `<Package>Error` is `nuikit.errors.UserError`, and `start_run` takes
@@ -41,5 +43,6 @@ the `pyproject.toml` line was left as it was, the update marks one conflict unde
 - **ruff checks two more things:** every signature in `src/` is annotated (ANN, TYP-1) and a `# noqa` names its rule
   (PGH004); `make check` lists what to fix.
 - **No example is added** to a project that already exists.
-- **The project keeps its names.** A package name that a new project could not take, because it is longer than 27
-  characters or as vague as `utils`, stays as it is.
+- **The project keeps its names,** even ones a new project could not take: a project name over 50 characters or
+  ending in a dash, a package name over 27 characters or as vague as `utils`, or the name of a dependency or a
+  module, such as `requests`.
