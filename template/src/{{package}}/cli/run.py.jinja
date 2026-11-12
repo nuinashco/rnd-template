@@ -57,7 +57,9 @@ def main(dict_cfg: DictConfig) -> None:
 {% else %}
     seeding.seed_everything(cfg.seed, deterministic=cfg.deterministic)
 {% endif %}
-    run_dir = runs.start_run(cfg, name=cfg.run_name, runs_dir=paths.RUNS_DIR)
+    run_dir = runs.start_run(
+        cfg, name=cfg.run_name, runs_dir=paths.RUNS_DIR, repo=paths.ROOT
+    )
 {% if use_wandb %}
     if cfg.tracker == "wandb":
         runs.mirror_to_wandb(
