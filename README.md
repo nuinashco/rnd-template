@@ -76,14 +76,18 @@ that changes the project, needs `uvx copier update --trust`: without it copier s
 
 ### From a release before 1.0.0
 
-Those releases lived in nuinashco/conventions and moved here with their tags, so point the project at this repo
-first. Replace `nuinashco/conventions` with `nuinashco/rnd-template` in two lines, `_src_path` in
-`.copier-answers.yml` and `conventions-hooks` in `pyproject.toml`, then run `uv lock` and commit. Update with
-`uvx copier update --trust`, since 1.0.0 brings a migration. If the `pyproject.toml` line was left as it was, the
-update marks one conflict under `[tool.uv.sources]`: keep the "after updating" side. What to expect:
+Those releases lived in nuinashco/conventions and moved here with their tags. A project made from one, whatever
+its profile, points at this repo first: until it does, `make lab` and a fresh `uv sync`, CI's included, cannot
+find the release. Replace `nuinashco/conventions` with `nuinashco/rnd-template` in two lines, `_src_path` in
+`.copier-answers.yml` and `conventions-hooks` in `pyproject.toml`, then run `uv lock` and commit.
+
+Then update with `uvx copier update --trust`, since 1.0.0 brings a migration. If the `pyproject.toml` line was
+left as it was, the update marks one conflict under `[tool.uv.sources]`: keep the "after updating" side. What to
+expect:
 
 - **`uni` and `lab` projects stay on their release.** Since 1.0.0 the template holds the R&D project only, so the
-  update stops in a project made with another profile and changes nothing.
+  update stops in a project made with another profile and changes nothing. The two lines above are all such a
+  project needs.
 - **An R&D project loses the copies old releases put in it:** `src/nuikit/`, `tests/nuikit/`, `CONVENTIONS.md` and
   the two subagents in `.claude/agents/`. nuikit is a dependency now, and the rules come with the plugins. Local
   edits to those files go too: until you commit the update, `git show HEAD:<path>` prints one, so you can move the
