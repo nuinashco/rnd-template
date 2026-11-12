@@ -8,13 +8,19 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any{{ ", Literal" if use_wandb else "" }}
 
-from pydantic import Field, PositiveInt, SerializeAsAny, field_validator
+from pydantic import (
+    Field,
+    NonNegativeInt,
+    PositiveInt,
+    SerializeAsAny,
+    field_validator,
+)
 {% else %}
 {% if use_wandb %}
 from typing import Literal
 
 {% endif %}
-from pydantic import Field
+from pydantic import Field, NonNegativeInt
 {% endif %}
 
 from nuikit.config import Schema
@@ -33,7 +39,7 @@ class MainConfig(Schema):
     run_name: str = Field(
         default="${now:%Y-%m-%d_%H-%M-%S}", description="directory under runs/"
     )
-    seed: int = 42
+    seed: NonNegativeInt = 42
     deterministic: bool = Field(
         default=False, description="true: deterministic torch kernels, slower"
     )

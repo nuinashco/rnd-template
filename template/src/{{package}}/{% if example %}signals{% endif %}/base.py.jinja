@@ -28,6 +28,6 @@ class Signal[C: SignalConfig](Configurable[C], ABC):
 
 
 class SignalFactory(ConfigurableFactory[Signal[Any]]):
-    """Registry of `signal` kinds; `signal=<kind>` selects one."""
+    """Registry of `signal` kinds; `signal=KIND` selects one."""
 
     config_group = "signal"

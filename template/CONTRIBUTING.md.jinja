@@ -2,7 +2,7 @@
 
 How {{ project_name }} is built and how to change it. Using it: [README.md](README.md).
 
-The rules it follows, each with its reason and its check, live in three places:
+The rules it follows, each with its check and, where it needs one, its reason, live in three places:
 
 - [nuinashco/conventions](https://github.com/nuinashco/conventions/blob/main/GUIDE.md): the rules for every Python
   repo (LAY, ARC, TYP, STY, DOC, ERR, LOG, TST, RDOC, GIT and TOOL, except the IDs below). The `conventions` Claude
@@ -28,11 +28,13 @@ flowchart TD
         paths["paths.py<br/>repository paths"]:::side
 {% if example %}
         cli --> config --> signals
+        cli --> signals
         cli --> report --> summary
         cli --> summary
         cli --> paths
 {% else %}
-        cli --> config --> paths
+        cli --> config
+        cli --> paths
 {% endif %}
     end
     nuikit["nuikit<br/>config, configgen, registry, errors,<br/>logging, runs, seeding"]:::kit
@@ -45,15 +47,17 @@ flowchart TD
     classDef kit fill:#ececec,stroke:#6b6b6b,color:#262626
 ```
 
-`{{ package }}` holds this project's code and nothing else. Each seam keeps the two colours apart, so a dry run can
-execute the pure half for real.
+`{{ package }}` holds this project's code and nothing else. Each seam keeps the two colours apart,
+so a dry run can execute the pure half for real.
 {% if example %}
 `stats` shows the split: `summary.py` computes, `report.py` writes.
 {% endif %}
 
 `nuikit` is the library every project from the template builds on: what schemas and families extend, and what an
 entry point sets up before it runs. `[tool.uv.sources]` pins its release tag; `copier update` moves the pin when the
-template moves to a new release, and fixes go to [nuinashco/nuikit](https://github.com/nuinashco/nuikit).
+template moves to a new release, and fixes go to [nuinashco/nuikit](https://github.com/nuinashco/nuikit). Install
+with uv: pip does not read `[tool.uv.sources]` and would look for nuikit and conventions-hooks on PyPI, where they
+are not published.
 
 ## Import layers
 
@@ -100,7 +104,7 @@ configs/                  Hydra YAML; generated files say so in their first line
 {% if example %}
   signal/<kind>.yaml      each signal kind with its defaults, selected by signal=<kind> (generated)
 {% endif %}
-  hydra/default.yaml      Hydra writes nothing; the app writes runs/
+  hydra/default.yaml      a run gets no Hydra files; the app writes runs/
 src/{{ package }}/
   cli/                    one module per console script: the composition roots
   config.py               entry config schemas + GENERATED (files `make configs` writes)
@@ -199,6 +203,9 @@ so they see every family even before any code uses it.
 | an item | `src/{{ package }}/<family>/items/<kind>.py` | `make configs` |
 | an entry config | a schema in `config.py` listed in `GENERATED` as `defaults/<command>.yaml`, and `configs/<command>.yaml` composing it | a `cli/<command>.py` and a console script |
 | a setting | a field with a default on the schema, described only if its name leaves something open (DOC-7) | `make configs` |
+
+`make configs` writes files and never removes one: after renaming or removing a kind, delete its
+`configs/<group>/<kind>.yaml`.
 {% if example %}
 
 ## Removing the example
@@ -206,30 +213,37 @@ so they see every family even before any code uses it.
 Once the first real family exists, drop `signals` and `stats` from a clean working tree:
 
 ```bash
-uvx copier update --trust --defaults --data example=false
+uvx copier update --defaults --data example=false
 ```
 
 Copier deletes the example's files and takes its lines out of `config.py`, `cli/run.py`, `configs/run.yaml`, the
 import layers and these docs. It marks conflicts inline, between `<<<<<<< before updating` and
-`>>>>>>> after updating`; resolve them, then run `make configs` and `make check`.
+`>>>>>>> after updating`: resolve them. The update also takes out the imports the example used: put back the ones
+your own code still needs, which `make lint` lists as F821. Kinds, tests and presets you added under
+`src/{{ package }}/signals/`, `tests/{{ package }}/signals/` or `configs/signal/` stay:
+delete them, or move them into your own family. Then run `make configs` and `make check`.
 {% endif %}
 
 ## Tests
 
 ```bash
-make test               # unit tests, a few seconds
-make test-integration   # end to end, behind the integration marker
+make test
+make test-integration
 ```
 
-Fakes, not mocks (`unittest.mock` is banned by ruff). Each case covers a distinct behaviour; child processes and
-servers only for what cannot be measured in process.
+`make test` runs the unit tests, in a few seconds; `make test-integration` runs the end-to-end ones, which carry the
+`integration` marker. Fakes, not mocks (`unittest.mock` is banned by ruff). Each case covers a distinct behaviour;
+child processes and servers only for what cannot be measured in process.
 
 ## Commits
 
 Conventional Commits with the standard types (`feat fix docs refactor test build ci perf style chore revert`), an
 optional scope, a lowercase imperative subject: one line, no articles, no body or trailers. Short-lived `<type>/<slug>`
-branches, squash-merged. The commit-msg hooks check all of it. PR descriptions follow
-`.github/pull_request_template.md`; `make github`, run once per repo, makes the squash commit the PR title alone.
+branches, squash-merged. The commit-msg hooks check the type, the single line, its length, the lowercase start, the
+final period and the articles. In an editor, write the subject on the first line: `conventional-pre-commit` refuses
+one below git's comment lines and, where `core.commentChar` sets a comment character other than `#`, also one with no
+blank line below it. PR descriptions follow `.github/pull_request_template.md`; `make github`, run once per repo with
+the `gh` CLI, makes the squash commit the PR title alone.
 
 ## Deviations
 

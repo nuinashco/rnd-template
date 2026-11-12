@@ -1,13 +1,16 @@
 # AGENTS.md
 
-{{ description.rstrip('.') }}. Architecture, import layers and extension recipes: [CONTRIBUTING.md](CONTRIBUTING.md).
+{{ description }}
+
+Architecture, import layers and extension recipes: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The general rules come from two Claude Code plugins that `.claude/settings.json` enables, `conventions` and `nuikit`:
 a skill per area, the `conventions-reviewer` and `descriptions-judge` subagents, and hooks that run `check-protected`
-before each edit, `check-comments` and `check-conventions` after it and `review-comments` before you hand back. Fix
-what they report. If the plugins are missing, add their marketplace once per machine:
-`/plugin marketplace add nuinashco/conventions`. This template's own rules are in `.claude/rules/` (layout, runs,
-tests). Exceptions this repo accepts are under "Deviations" in CONTRIBUTING.md.
+before each edit, `check-comments` and `check-conventions` after it, and `review-comments` in the background once you
+hand back, which wakes you when it has findings. Fix what they report. The plugins need a one-time install
+(README.md, "Setup"), and a cloud session loads none: without them, read the rules where CONTRIBUTING.md links them
+and rely on `make check`. This template's own rules are in `.claude/rules/` (layout, runs, tests). Exceptions this
+repo accepts are under "Deviations" in CONTRIBUTING.md.
 
 ## Design first
 

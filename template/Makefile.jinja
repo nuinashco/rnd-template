@@ -1,6 +1,10 @@
 .DEFAULT_GOAL := help
 .PHONY: help setup github lint format typecheck test test-integration configs lint-imports check
-PYTHON_FILES = $$(git ls-files -co --exclude-standard '*.py')
+# Every Python file git does not ignore, NUL-separated so that a name with a space or a
+# letter outside ASCII reaches the checks whole. Git lists a deleted file until the deletion
+# is staged, as after `copier update`; the loop leaves it out.
+PYTHON_FILES = git ls-files -z -co --exclude-standard '*.py' \
+	| xargs -0 sh -c 'for f; do if [ -f "$$f" ]; then printf "%s\0" "$$f"; fi; done' sh
 
 help:  ## show targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -16,13 +20,14 @@ github:  ## once per GitHub repo: squash-merge only, PR title as the commit, mer
 		-F delete_branch_on_merge=true
 
 lint:  ## ruff and the conventions checks on every Python file, no changes
+	@git rev-parse --git-dir > /dev/null
 	uv run ruff check
 	uv run ruff format --check
-	uv run check-comments $(PYTHON_FILES)
-	uv run check-conventions $(PYTHON_FILES)
+	$(PYTHON_FILES) | xargs -0 uv run check-comments
+	$(PYTHON_FILES) | xargs -0 uv run check-conventions
 
-format:  ## ruff auto-fix + format
-	uv run ruff check --fix
+format:  ## ruff auto-fix + format; what ruff cannot fix is left to `make lint`
+	uv run ruff check --fix --exit-zero
 	uv run ruff format
 
 typecheck:  ## pyright
@@ -31,8 +36,9 @@ typecheck:  ## pyright
 test:  ## unit tests
 	uv run pytest
 
+# pytest exits 5 when it selects no test, as long as none carries the marker.
 test-integration:  ## end-to-end tests behind the integration marker
-	uv run pytest -m integration
+	uv run pytest -m integration || [ $$? -eq 5 ]
 
 configs:  ## regenerate configs/ from the schemas
 	uv run {{ cli }}-configs

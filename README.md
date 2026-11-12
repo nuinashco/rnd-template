@@ -9,24 +9,34 @@ It is for tools, pipelines and training code that run many times with different 
 
 ## Start a project
 
-You need [uv](https://docs.astral.sh/uv/) and git.
+You need [uv](https://docs.astral.sh/uv/), git and make.
 
 ```bash
 uvx copier copy gh:nuinashco/rnd-template my-project
 cd my-project
-git init && make setup    # install the dependencies and the git hooks
-make check                # ruff, the conventions checks, import layers, pyright, pytest
+git init -b main
+make setup
+make check
 ```
 
-Copier asks for the project name, the import package, the minimum Python (3.14 by default), whether runs can mirror
-to Weights & Biases, and whether to include the example. `--defaults` accepts every default.
+Copier asks for the project name (the folder's name by default), the import package, a description, the author, the
+minimum Python (3.14 by default), whether runs can mirror to Weights & Biases, and whether to include the example.
+`--defaults` accepts every default, the template author's name among them, so pass yours with it:
+`-d author_name=... -d author_email=...`. Under `--defaults` the folder's name must be one the template accepts
+(kebab-case, not a dependency's or a module's name); otherwise copier stops with the reason at the end of a
+traceback, so pass `-d project_name=...`. `make setup` installs the dependencies and the git hooks; `make check`
+runs what CI runs: ruff, the conventions checks, the import layers, pyright and pytest. Commit everything it
+leaves, `uv.lock` included: CI installs from it.
 
 The new project already runs:
 
 ```bash
-uv run my-project-run run_name=first    # writes runs/first/: config.yaml, run.json, summary.json
-uv run my-project-run signal=constant   # any setting can be overridden on the command line
+uv run my-project-run run_name=first
+uv run my-project-run signal=constant
 ```
+
+The first command writes `runs/first/` with `config.yaml`, `run.json` and `summary.json`. The second overrides a
+setting, as any `key=value` on the command line does.
 
 ## What you get
 
@@ -43,8 +53,16 @@ my-project/
 The example is a small family of signals and a statistics module wired into the run command. It shows each pattern
 once, so new code can copy its shape. The project's CONTRIBUTING.md says how to remove it once real code exists.
 
-In Claude Code, trust the project folder and install the `conventions` and `nuikit` plugins it offers. On a machine
-that has never used them, add their marketplace first: `/plugin marketplace add nuinashco/conventions`.
+The project's `.claude/settings.json` turns on two Claude Code plugins, `conventions` and `nuikit`. Install them
+once per machine:
+
+```text
+/plugin marketplace add nuinashco/conventions
+/plugin install conventions@nuinashco
+/plugin install nuikit@nuinashco
+```
+
+A cloud session loads no plugins; there the project's AGENTS.md sends Claude to the rules instead.
 
 ## Update a project
 
@@ -52,22 +70,16 @@ A project remembers the template release it came from in `.copier-answers.yml`. 
 from the project root with a clean working tree:
 
 ```bash
-uvx copier update --trust
+uvx copier update --defaults
 ```
 
-Copier merges the template's changes with yours and marks conflicts inline, between `<<<<<<< before updating` and
-`>>>>>>> after updating`. `--trust` lets the template's migrations run. Afterwards run `uv sync` and `make check`.
+`--defaults` keeps the answers recorded in `.copier-answers.yml` instead of asking again. Copier merges the
+template's changes with yours and marks conflicts inline, between `<<<<<<< before updating` and
+`>>>>>>> after updating`. Afterwards run `uv sync` and `make check`. A release that brings a migration, a script
+that changes the project, needs `uvx copier update --defaults --trust`: without it copier stops and says so.
 
-### From a release before 1.0.0
-
-- **`uni` and `lab` projects stay where they are.** Since 1.0.0 the template holds the R&D project only, so the
-  update stops in a project made with another profile and changes nothing.
-- **Point the project at this repo first.** Its `.copier-answers.yml` names nuinashco/conventions, where the template
-  used to live. Set `_src_path: gh:nuinashco/rnd-template` in that file by hand, commit, then update.
-- **The update deletes the copies old releases put in the project:** `src/nuikit/`, `tests/nuikit/`,
-  `CONVENTIONS.md` and the two subagents in `.claude/agents/`. nuikit is a dependency now, and the rules come with
-  the plugins. Local edits to those files go too; `git checkout HEAD -- <path>` brings one back before you commit.
-- **No example is added** to a project that already exists.
+A project made from a release before 1.0.0 needs two edits first, and the update removes what those releases
+copied into it: [UPGRADING.md](UPGRADING.md) has the steps.
 
 ## Related repos
 
@@ -77,7 +89,8 @@ Copier merges the template's changes with yours and marks conflicts inline, betw
 | [conventions](https://github.com/nuinashco/conventions) | The rules, the checks that enforce them and the Claude Code plugins. |
 
 A project pins a release tag of each under `[tool.uv.sources]` in its `pyproject.toml`. A template release moves the
-pins, and `copier update` brings them to the project.
+pins, and `copier update` brings them to the project. The plugins are not pinned: they follow the `main` branch of
+their repos and update themselves.
 
 ## Contributing
 

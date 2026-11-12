@@ -1,13 +1,15 @@
 # Copier template for R&D projects built on nuikit and the nuinashco conventions.
 #
 #   uvx copier copy gh:nuinashco/rnd-template my-project
-#   uvx copier update --trust                  # inside a generated project
+#   uvx copier update --defaults               # inside a generated project
 #
-# The project's files live in template/. `--trust` lets the migrations below run. A project made
-# before 1.0.0 first sets `_src_path: gh:nuinashco/rnd-template` in its .copier-answers.yml, which
-# still names nuinashco/conventions (README.md, "Update a project").
+# The project's files live in template/. An update that runs one of the migrations below needs
+# `--trust`. A project made before 1.0.0 first replaces nuinashco/conventions with
+# nuinashco/rnd-template in two lines: `_src_path` in its .copier-answers.yml and
+# `conventions-hooks` in its pyproject.toml (UPGRADING.md).
 
-_min_copier_version: "9.4.0"
+# The name questions leave a default out with UNSET, which older releases cannot read.
+_min_copier_version: "9.11.0"
 _subdirectory: template
 _templates_suffix: .jinja
 _envops:
@@ -19,49 +21,50 @@ _migrations:
   # 1.0.0 holds the rnd project only, and depends on nuikit and the conventions plugin instead of
   # copying them in. Before anything changes, the first command stops in a uni or lab project and
   # says in the others what goes: copier deletes the copies, local edits included. The second
-  # clears what copier left of them.
+  # clears what copier left of them, except files git has no copy of.
   - version: "1.0.0"
     when: "{{ _stage == 'before' }}"
     command:
       - "{{ _copier_python }}"
-      - -c
-      - |
-        import sys, yaml
-        with open("{{ _copier_conf.answers_file }}", encoding="utf-8") as answers:
-            profile = yaml.safe_load(answers).get("profile", "rnd")
-        if profile != "rnd":
-            sys.exit(f"error: rnd-template 1.0.0 has no {profile} profile, so this project stays "
-                     "on the release it was made from; nothing was changed")
-        print("1.0.0 removes src/nuikit, tests/nuikit, CONVENTIONS.md and the two subagents in "
-              ".claude/agents, local edits included: nuikit and the plugins bring them now. "
-              "`git checkout HEAD -- <path>` brings one back before you commit.")
+      - "{{ _copier_conf.src_path }}/migrations/to_1_0_0.py"
+      - before
+      - "{{ _copier_conf.answers_file }}"
+      - "{{ _version_from }}"
   - version: "1.0.0"
     command:
       - "{{ _copier_python }}"
-      - -c
-      - >-
-        import pathlib, shutil;
-        paths = ['src/nuikit', 'tests/nuikit', 'CONVENTIONS.md',
-        '.claude/agents/conventions-reviewer.md', '.claude/agents/descriptions-judge.md'];
-        [shutil.rmtree(p) if p.is_dir() else p.unlink()
-        for p in map(pathlib.Path, paths) if p.exists()]
+      - "{{ _copier_conf.src_path }}/migrations/to_1_0_0.py"
+      - after
+      - "{{ _copier_conf.answers_file }}"
+      - "{{ _version_from }}"
 
 project_name:
   type: str
-  help: Distribution name (kebab-case, e.g. llm-eval-launcher)
+  help: Distribution name, kebab-case, at most 50 characters (e.g. llm-eval-launcher)
+  # The folder's name, made kebab-case; one with a letter outside ASCII stays as it is, rather
+  # than lose the letter. Copier checks a default before it asks, so a name it would refuse is
+  # offered only under --defaults, where the refusal is the answer.
+  default: >-
+    {% from 'includes/names.jinja' import project_refusal %}{% set folder = _copier_conf.dst_path
+    | realpath | basename | lower %}{% set name = folder | regex_replace('[^a-z0-9]+', '-')
+    | trim('-') if folder.isascii() else folder %}{{
+    name if _copier_conf.defaults or not project_refusal(name) | trim else UNSET }}
   validator: >-
-    {% if not (project_name | regex_search('^[a-z][a-z0-9-]*$')) %}
-    use lowercase letters, digits and dashes, starting with a letter
-    {% endif %}
+    {% from 'includes/names.jinja' import project_refusal %}{{
+    project_refusal(project_name, _copier_conf.overwrite) }}
 
 package:
   type: str
-  help: Import name of the package
-  default: "{{ project_name | replace('-', '_') }}"
+  help: Import name of the package, snake_case, at most 27 characters
+  default: >-
+    {% from 'includes/names.jinja' import package_refusal %}{% set name = project_name
+    | replace('-', '_') %}{{
+    name if _copier_conf.defaults or not package_refusal(name) | trim else UNSET }}
+  # An update runs with `overwrite` on, a first copy without: that is how the two macros tell
+  # a project that exists, which keeps any name an earlier release took, from a new one.
   validator: >-
-    {% if not (package | regex_search('^[a-z][a-z0-9_]*$')) %}
-    use a lowercase Python identifier
-    {% endif %}
+    {% from 'includes/names.jinja' import package_refusal %}{{
+    package_refusal(package, _copier_conf.overwrite) }}
 
 description:
   type: str
@@ -94,7 +97,7 @@ use_wandb:
 
 example:
   type: bool
-  help: Include the worked example domain (delete it once your first real family exists)?
+  help: Include the worked example (delete it once a real family exists)?
   # Only projects made before 1.0.0 carry a `profile` answer, so updating one leaves the example out.
   default: "{{ profile is not defined }}"
 

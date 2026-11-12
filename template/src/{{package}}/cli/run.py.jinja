@@ -1,19 +1,19 @@
 {% if example %}
-"""`{{ cli }}-run`: sample the configured signal, summarize it, and record the run.
+"""`{{ cli }}-run`: sample a signal, summarize it and record the run.
 
 Usage:
 
-    {{ cli }}-run                                   # configs/run.yaml as it is
+    {{ cli }}-run                                   # configs/run.yaml
     {{ cli }}-run signal=constant signal.value=2    # Hydra overrides
 
 Writes runs/<run_name>/ with the resolved config, its provenance and summary.json.
 """
 {% else %}
-"""`{{ cli }}-run`: validate configs/run.yaml, seed, and start a run directory.
+"""`{{ cli }}-run`: validate the config, seed and start a run.
 
 Usage:
 
-    {{ cli }}-run                            # configs/run.yaml as it is
+    {{ cli }}-run                            # configs/run.yaml
     {{ cli }}-run seed=1 run_name=baseline   # Hydra overrides
 
 Writes runs/<run_name>/ with the resolved config and its provenance.
@@ -57,7 +57,9 @@ def main(dict_cfg: DictConfig) -> None:
 {% else %}
     seeding.seed_everything(cfg.seed, deterministic=cfg.deterministic)
 {% endif %}
-    run_dir = runs.start_run(cfg, name=cfg.run_name, runs_dir=paths.RUNS_DIR)
+    run_dir = runs.start_run(
+        cfg, name=cfg.run_name, runs_dir=paths.RUNS_DIR, repo=paths.ROOT
+    )
 {% if use_wandb %}
     if cfg.tracker == "wandb":
         runs.mirror_to_wandb(
