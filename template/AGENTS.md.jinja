@@ -29,7 +29,7 @@ wires them. Delete the example once the first real family exists (CONTRIBUTING.m
 
 ```bash
 make setup        # uv sync + git hooks (pre-commit, commit-msg)
-make check        # ruff, import contracts, pyright, pytest: must pass before every commit
+make check        # ruff, the conventions checks, import contracts, pyright, pytest: before every commit
 make format       # ruff fixes + format
 make configs      # regenerate configs/ after changing any config schema
 {{ '%-17s' | format(cli ~ '-run') }} # one run; results in runs/<run_name>/
