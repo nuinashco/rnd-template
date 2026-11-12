@@ -21,9 +21,10 @@ make check
 
 Copier asks for the project name (the folder's name by default), the import package, a description, the author, the
 minimum Python (3.14 by default), whether runs can mirror to Weights & Biases, and whether to include the example.
-`--defaults` accepts every default. `make setup` installs the dependencies and the git hooks; `make check` runs
-what CI runs: ruff, the conventions checks, the import layers, pyright and pytest. Commit everything it leaves,
-`uv.lock` included: CI installs from it.
+`--defaults` accepts every default, the template author's name among them, so pass yours with it:
+`-d author_name=... -d author_email=...`. `make setup` installs the dependencies and the git hooks; `make check`
+runs what CI runs: ruff, the conventions checks, the import layers, pyright and pytest. Commit everything it
+leaves, `uv.lock` included: CI installs from it.
 
 The new project already runs:
 
@@ -74,26 +75,8 @@ Copier merges the template's changes with yours and marks conflicts inline, betw
 `>>>>>>> after updating`. Afterwards run `uv sync` and `make check`. A release that brings a migration, a script
 that changes the project, needs `uvx copier update --trust`: without it copier stops and says so.
 
-### From a release before 1.0.0
-
-Those releases lived in nuinashco/conventions and moved here with their tags. A project made from one, whatever
-its profile, points at this repo first: until it does, `make lab` and a fresh `uv sync`, CI's included, cannot
-find the release. Replace `nuinashco/conventions` with `nuinashco/rnd-template` in two lines, `_src_path` in
-`.copier-answers.yml` and `conventions-hooks` in `pyproject.toml`, then run `uv lock` and commit.
-
-Then update with `uvx copier update --trust`, since 1.0.0 brings a migration. If the `pyproject.toml` line was
-left as it was, the update marks one conflict under `[tool.uv.sources]`: keep the "after updating" side. What to
-expect:
-
-- **`uni` and `lab` projects stay on their release.** Since 1.0.0 the template holds the R&D project only, so the
-  update stops in a project made with another profile and changes nothing. The two lines above are all such a
-  project needs.
-- **An R&D project loses the copies old releases put in it:** `src/nuikit/`, `tests/nuikit/`, `CONVENTIONS.md` and
-  the two subagents in `.claude/agents/`. nuikit is a dependency now, and the rules come with the plugins. Local
-  edits to those files go too: until you commit the update, `git show HEAD:<path>` prints one, so you can move the
-  change into your own package. A project from v0.1.0 holds its copy as `src/<package>/core/`: that goes as well,
-  and imports of `<package>.core` become imports of `nuikit`.
-- **No example is added** to a project that already exists.
+A project made from a release before 1.0.0 needs two edits first, and the update removes what those releases
+copied into it: [UPGRADING.md](UPGRADING.md) has the steps.
 
 ## Related repos
 

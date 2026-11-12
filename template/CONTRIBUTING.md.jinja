@@ -213,8 +213,8 @@ uvx copier update --defaults --data example=false
 
 Copier deletes the example's files and takes its lines out of `config.py`, `cli/run.py`, `configs/run.yaml`, the
 import layers and these docs. It marks conflicts inline, between `<<<<<<< before updating` and
-`>>>>>>> after updating`; resolve them, then run `make configs` and `make check`. The update also takes out the
-imports the example used: put back the ones your own code still needs, which `make lint` lists as F821.
+`>>>>>>> after updating`: resolve them. The update also takes out the imports the example used: put back the ones
+your own code still needs, which `make lint` lists as F821. Then run `make configs` and `make check`.
 {% endif %}
 
 ## Tests

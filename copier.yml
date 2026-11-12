@@ -4,11 +4,12 @@
 #   uvx copier update                          # inside a generated project
 #
 # The project's files live in template/. An update that runs one of the migrations below needs
-# `--trust`. A project made before 1.0.0 first sets `_src_path: gh:nuinashco/rnd-template` in its
-# .copier-answers.yml, which still names nuinashco/conventions (README.md, "Update a project").
+# `--trust`. A project made before 1.0.0 first replaces nuinashco/conventions with
+# nuinashco/rnd-template in two lines: `_src_path` in its .copier-answers.yml and
+# `conventions-hooks` in its pyproject.toml (UPGRADING.md).
 
-# 9.4.0 and 9.6.0 cannot read _copier_conf in a default, which `project_name` does.
-_min_copier_version: "9.7.0"
+# The name questions leave a default out with UNSET, which older releases cannot read.
+_min_copier_version: "9.11.0"
 _subdirectory: template
 _templates_suffix: .jinja
 _envops:
@@ -20,7 +21,7 @@ _migrations:
   # 1.0.0 holds the rnd project only, and depends on nuikit and the conventions plugin instead of
   # copying them in. Before anything changes, the first command stops in a uni or lab project and
   # says in the others what goes: copier deletes the copies, local edits included. The second
-  # clears what copier left of them.
+  # clears what copier left of them, except files git ignores.
   - version: "1.0.0"
     when: "{{ _stage == 'before' }}"
     command:
@@ -28,46 +29,40 @@ _migrations:
       - "{{ _copier_conf.src_path }}/migrations/to_1_0_0.py"
       - before
       - "{{ _copier_conf.answers_file }}"
+      - "{{ _version_from }}"
   - version: "1.0.0"
     command:
       - "{{ _copier_python }}"
       - "{{ _copier_conf.src_path }}/migrations/to_1_0_0.py"
       - after
+      - "{{ _copier_conf.answers_file }}"
+      - "{{ _version_from }}"
 
 project_name:
   type: str
   help: Distribution name, kebab-case (e.g. llm-eval-launcher)
-  default: "{{ _copier_conf.dst_path | realpath | basename }}"
-  # Copier cuts a message off at the terminal's width, after its own 46 characters.
+  # The folder's name, made kebab-case. Copier checks a default before it asks, so a name it would
+  # refuse is offered only under --defaults, where the refusal is the answer.
+  default: >-
+    {% from 'includes/names.jinja' import project_refusal %}{% set name = _copier_conf.dst_path
+    | realpath | basename | lower | regex_replace('[^a-z0-9]+', '-') | trim('-') %}{{
+    name if _copier_conf.defaults or not project_refusal(name) | trim else UNSET }}
   validator: >-
-    {% if not (project_name | regex_search('^[a-z]([a-z0-9-]*[a-z0-9])?$')) %}
-    use kebab-case, like my-project
-    {% endif %}
+    {% from 'includes/names.jinja' import project_refusal %}{{
+    project_refusal(project_name, _copier_conf.overwrite) }}
 
 package:
   type: str
   help: Import name of the package
-  default: "{{ project_name | replace('-', '_') }}"
-  # 27 characters keep every generated line within 88 columns. A keyword cannot be imported, the
-  # modules listed are ones Python or a dependency already has, and LAY-2 refuses the last six.
+  default: >-
+    {% from 'includes/names.jinja' import package_refusal %}{% set name = project_name
+    | replace('-', '_') %}{{
+    name if _copier_conf.defaults or not package_refusal(name) | trim else UNSET }}
+  # An update runs with `overwrite` on, a first copy without: that is how the two macros tell
+  # a project that exists, which keeps a long or vague name, from a new one.
   validator: >-
-    {% if not (package | regex_search('^[a-z][a-z0-9_]*$')) %}
-    use snake_case, like my_project
-    {% elif package | length > 27 %}
-    use at most 27 characters
-    {% elif package in ('and as assert async await break class continue def del elif else except
-    finally for from global if import in is lambda nonlocal not or pass raise return try while
-    with yield').split() %}
-    a Python keyword; pick another name
-    {% elif package in ('abc array ast calendar code copy csv email enum glob html http io json
-    logging math numbers os parser platform profile queue random re resource secrets select
-    signal site statistics string struct sys test tests time token trace types typing uuid xml
-    attr attrs click hydra nuikit numpy omegaconf pydantic pytest rootutils structlog wandb
-    yaml').split() %}
-    hides a module of that name; pick another
-    {% elif package in ('common core helpers misc util utils').split() %}
-    too vague (LAY-2); name what it does
-    {% endif %}
+    {% from 'includes/names.jinja' import package_refusal %}{{
+    package_refusal(package, _copier_conf.overwrite) }}
 
 description:
   type: str

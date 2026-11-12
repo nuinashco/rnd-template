@@ -6,6 +6,11 @@ defaults:
   - override hydra_logging: disabled
   - override job_logging: disabled
 
+# Hydra sets logging up again before every job of a sweep. Left at its default, that would
+# switch off the loggers the first job made, and the jobs after it would log nothing.
+job_logging:
+  disable_existing_loggers: false
+
 output_subdir: null
 run:
   dir: .

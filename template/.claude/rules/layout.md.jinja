@@ -93,8 +93,8 @@ modules.
 
 ### TOOL-3 MUST
 
-A generated project keeps its `.copier-answers.yml` and pulls template changes with `uvx copier update`, from a
-clean working tree. A release that brings a migration, such as one that removes files it no longer ships, needs
-`--trust`: copier stops and says so.
+A generated project keeps its `.copier-answers.yml` and pulls template changes with `uvx copier update --defaults`,
+from a clean working tree: `--defaults` keeps the recorded answers instead of asking again. A release that brings
+a migration, such as one that removes files it no longer ships, needs `--trust`: copier stops and says so.
 
 *Check:* review.

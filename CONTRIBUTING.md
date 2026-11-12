@@ -8,11 +8,13 @@ How the template is built and how to change it. Using it: [README.md](README.md)
 
 ```text
 copier.yml        the questions, the hidden answers (nuikit_source, hooks_source), derived names, _migrations
+includes/         names.jinja: the names a project cannot take, as macros the name questions import
 migrations/       scripts that `_migrations` run in a project during `copier update`
 template/         the generated project; *.jinja files are rendered, `{% if example %}` names only with the example
   .claude/        settings.json (the plugins, no hooks) and rules/ (this template's rules, path-scoped)
-tests/            test_template.py: three variants, awkward answers, updates from v0.3.4, removing the example
+tests/            test_template.py: three variants, awkward answers and names, updates from old releases
 Makefile          lint and test
+UPGRADING.md      the steps for a project made before 1.0.0
 ```
 
 ## What lives where
@@ -36,8 +38,12 @@ a retired one.
   `{% if example %}` leaves nothing behind when the example is off, including import layers and docs.
 - Generated YAML in `template/configs/` matches what nuikit's `configgen` writes: render a project, run
   `make configs` and copy the output back.
-- `copier update` keeps working on existing projects: no renamed questions, and a migration in `copier.yml` for
-  every file a release stops shipping.
+- `copier update` keeps working on existing projects: no renamed questions, a migration in `copier.yml` for
+  every file a release stops shipping, and no new refusal of an answer a project already has. The name questions
+  show how: a check that only style asks for is skipped when `_copier_conf.overwrite` is set, as it is in an
+  update.
+- A dependency added to `template/pyproject.toml.jinja` adds its import and distribution names to `installed`
+  in `includes/names.jinja`; a test names the ones that are missing.
 - Change nuikit or the conventions in their own repos. This one only pins their release tags: both in `copier.yml`
   and, for `make lint`, the conventions tag in the `Makefile`.
 
@@ -51,8 +57,10 @@ make test
 `make lint` runs ruff, `check-comments` and `check-conventions` on `tests/` and `migrations/`. `make test` takes
 about a minute and needs network. The tests render the three variants and, in each project, run `make check`, the run command and
 `<cli>-configs --check`, then check the Claude settings, the protected files and the shape of the rules. They also
-start a project from the real `v0.3.4` release and update it to the working tree: the copies go, `make check` passes,
-and a `uni` or `lab` project is refused untouched. That needs the release tags, so fetch them (`git fetch --tags`).
+render a project from the `v0.3.4` and `v0.1.0` tags of a local clone and update it to the working tree: the copies
+go, `make check` passes, and a `uni` or `lab` project is refused untouched. That needs the release tags, so fetch
+them (`git fetch --tags`). Such a project names its `conventions-hooks` source as a local path; one test rewrites
+the line to what a project made on GitHub carries.
 
 Each project installs nuikit and conventions-hooks at the releases `copier.yml` pins, which is what a user gets. To
 test against checkouts instead, as they are on disk:

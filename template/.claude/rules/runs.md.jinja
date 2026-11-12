@@ -38,12 +38,13 @@ extra.
 ### RUN-5 MUST
 
 Notebooks are for exploration: `notebooks/NN-topic.ipynb`, outputs stripped, never imported. Logic worth reusing moves
-into `src/` with a test. Third-party notebooks go in `notebooks/reference/`.
+into `src/` with a test. Third-party notebooks go in `notebooks/reference/` and stay as published, outputs included:
+the hooks that rewrite files skip that folder. One above 500 kB is linked instead: the large-file hook refuses it.
 
 *Why:* "notebooks are for exploration and communication, source files are for repetition"
 ([Cookiecutter Data Science](https://cookiecutter-data-science.drivendata.org/opinions/)).
 
-*Check:* nbstripout pre-commit hook.
+*Check:* nbstripout pre-commit hook, on every notebook outside `notebooks/reference/`.
 
 ### RUN-6 MUST
 

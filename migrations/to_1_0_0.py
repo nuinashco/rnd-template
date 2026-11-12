@@ -2,13 +2,16 @@
 
 Usage:
 
-    python to_1_0_0.py before .copier-answers.yml    # stop in uni and lab, name copies
-    python to_1_0_0.py after                         # clear what is left of them
+    python to_1_0_0.py before .copier-answers.yml v0.3.4
+    python to_1_0_0.py after .copier-answers.yml v0.3.4
+
+`before` stops in a uni or lab project and names the copies that go; `after` clears what
+copier left of them. The last argument is the release the project is on.
 """
 
 from __future__ import annotations
 
-import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -23,6 +26,7 @@ NOTICE = (
     "now. Until you commit the update, `git show HEAD:<path>` prints one, so you can "
     "move a change into your own package."
 )
+KEPT = "kept in {folder}, since git ignores them: {names}"
 # What releases before 1.0.0 copied into a project.
 COPIES = (
     "src/nuikit",
@@ -31,33 +35,70 @@ COPIES = (
     ".claude/agents/conventions-reviewer.md",
     ".claude/agents/descriptions-judge.md",
 )
-# v0.1.0 named its nuikit `core`; copier removes those files itself.
+# Release 0.1.0 named its nuikit `core`; in a later project that folder is its own code.
 FIRST_COPIES = ("src/{package}/core", "tests/{package}/core")
 
 
-def before(answers_file: str) -> None:
+def before(answers_file: str, release: str) -> None:
     """Stop in a uni or lab project; in an rnd one, name the copies that go."""
     answers = yaml.safe_load(Path(answers_file).read_text(encoding="utf-8"))
     profile = answers.get("profile", "rnd")
     if profile != "rnd":
         sys.exit(REFUSAL.format(profile=profile))
-    named = [*COPIES, *(p.format(package=answers.get("package")) for p in FIRST_COPIES)]
-    copies = [path for path in named if Path(path).exists()]
-    if copies:
-        print(NOTICE.format(copies=", ".join(copies)))
+    present = [str(path) for path in copies(answers, release) if path.exists()]
+    if present:
+        print(NOTICE.format(copies=", ".join(present)))
 
 
-def after() -> None:
-    """Remove what copier left of the copies: files no release rendered."""
-    for path in map(Path, COPIES):
+def after(answers_file: str, release: str) -> None:
+    """Remove what copier left of the copies; a file git ignores there stays."""
+    answers = yaml.safe_load(Path(answers_file).read_text(encoding="utf-8"))
+    for path in copies(answers, release):
         if path.is_dir():
-            shutil.rmtree(path)
+            clear(path)
         elif path.exists():
             path.unlink()
 
 
-if __name__ == "__main__":
-    if sys.argv[1] == "before":
-        before(sys.argv[2])
+def copies(answers: dict[str, object], release: str) -> list[Path]:
+    """Return where `release` put its copies in a project with these answers."""
+    named = list(COPIES)
+    if release.removeprefix("v").startswith("0.1."):
+        named += [path.format(package=answers.get("package")) for path in FIRST_COPIES]
+    return [Path(path) for path in named]
+
+
+def clear(folder: Path) -> None:
+    """Delete the folder, except the files in it that only this machine has."""
+    kept = ignored(folder)
+    for item in sorted(folder.rglob("*"), reverse=True):
+        if item.is_dir() and not item.is_symlink():
+            if not any(item.iterdir()):
+                item.rmdir()
+        elif item not in kept:
+            item.unlink()
+    if kept:
+        print(KEPT.format(folder=folder, names=", ".join(sorted(map(str, kept)))))
     else:
-        after()
+        folder.rmdir()
+
+
+def ignored(folder: Path) -> set[Path]:
+    """Return the files in `folder` that git ignores, bytecode caches aside.
+
+    Git has no copy of an ignored file, so nothing could bring it back.
+    """
+    command = ("git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z")
+    listed = subprocess.run(
+        [*command, "--", str(folder)], capture_output=True, text=True, check=True
+    ).stdout
+    names = (Path(name) for name in listed.split("\0") if name)
+    return {name for name in names if "__pycache__" not in name.parts}
+
+
+if __name__ == "__main__":
+    stage, answers_file, release = sys.argv[1:4]
+    if stage == "before":
+        before(answers_file, release)
+    else:
+        after(answers_file, release)

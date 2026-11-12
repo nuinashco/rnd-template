@@ -45,7 +45,8 @@ A sweep needs a run name that differs for each job:
 {% if use_wandb %}
 
 To mirror a run to Weights & Biases, add `tracker=wandb`. Log in once with `uv run wandb login`, or put
-`WANDB_API_KEY` in `.env`; `wandb_project` and `wandb_entity` choose where the run goes.
+`WANDB_API_KEY` in `.env`; `wandb_project` and `wandb_entity` choose where the run goes. W&B records the command
+line as typed, in its files under `runs/<run_name>/wandb/` and in the run it uploads.
 {% endif %}
 
 ## Commands
@@ -90,5 +91,6 @@ std: 3.0
 ```
 {% endif %}
 
-Secrets go in `.env`, reach configs as `${oc.env:NAME,null}` and are typed `SecretStr` in the schema: only those
-fields are masked in a run's `config.yaml`.
+Secrets go in `.env`, never on the command line, reach configs as `${oc.env:NAME,null}` and are typed
+`SecretStr | None = None` in the schema: only those fields are masked in a run's `config.yaml` and in the command
+line that `run.json` records.

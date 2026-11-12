@@ -1,0 +1,74 @@
+{#
+  Names a project cannot take. copier.yml imports the two macros for its validators and defaults.
+
+  A package named like a module that Python finds first cannot be imported. `stdlib` holds the
+  standard library of Python 3.12 to 3.14, and `installed` the import and distribution names of
+  all that a project installed when this release was made, `use_wandb` included. The tests keep
+  `stdlib` complete, and `installed` for what a project's pyproject.toml asks for by name.
+#}
+{% set keywords = 'and as assert async await break class continue def del elif else except
+  finally for from global if import in is lambda nonlocal not or pass raise return try while
+  with yield'.split() %}
+{% set stdlib = 'abc aifc annotationlib antigravity argparse array ast asyncio atexit audioop
+  base64 bdb binascii bisect builtins bz2 calendar cgi cgitb chunk cmath cmd code codecs codeop
+  collections colorsys compileall compression concurrent configparser contextlib contextvars copy
+  copyreg crypt csv ctypes curses dataclasses datetime dbm decimal difflib dis doctest email
+  encodings ensurepip enum errno faulthandler fcntl filecmp fileinput fnmatch fractions ftplib
+  functools gc genericpath getopt getpass gettext glob graphlib grp gzip hashlib heapq hmac html
+  http idlelib imaplib imghdr importlib inspect io ipaddress itertools json keyword lib2to3
+  linecache locale logging lzma mailbox mailcap marshal math mimetypes mmap modulefinder msilib
+  msvcrt multiprocessing netrc nis nntplib nt ntpath nturl2path numbers opcode operator optparse
+  os ossaudiodev pathlib pdb pickle pickletools pipes pkgutil platform plistlib poplib posix
+  posixpath pprint profile pstats pty pwd py_compile pyclbr pydoc pydoc_data pyexpat queue quopri
+  random re readline reprlib resource rlcompleter runpy sched secrets select selectors shelve
+  shlex shutil signal site smtplib sndhdr socket socketserver spwd sqlite3 sre_compile
+  sre_constants sre_parse ssl stat statistics string stringprep struct subprocess sunau symtable
+  sys sysconfig syslog tabnanny tarfile telnetlib tempfile termios textwrap this threading time
+  timeit tkinter token tokenize tomllib trace traceback tracemalloc tty turtle turtledemo types
+  typing unicodedata unittest urllib uu uuid venv warnings wave weakref webbrowser winreg
+  winsound wsgiref xdrlib xml xmlrpc zipapp zipfile zipimport zlib zoneinfo'.split() %}
+{% set installed = 'annotated_types anyio attr attrs certifi cfgv charset_normalizer click
+  colorama conventions_hooks coreweave_evaluations cwevals distlib distro dotenv filelock google
+  googleapis_common_protos grimp h11 httpcore httpx hydra hydra_core identify idna import_linter
+  importlinter iniconfig markdown_it markdown_it_py mdurl nodeenv nodejs_wheel
+  nodejs_wheel_binaries nuikit numpy omegaconf opentelemetry opentelemetry_api
+  opentelemetry_exporter_http_transport opentelemetry_exporter_otlp_common
+  opentelemetry_exporter_otlp_proto_common opentelemetry_exporter_otlp_proto_http
+  opentelemetry_proto opentelemetry_sdk opentelemetry_semantic_conventions packaging platformdirs
+  pluggy pre_commit protobuf py pydantic pydantic_core pygments pyright pytest python_discovery
+  python_dotenv pyyaml requests rich rootutils ruff sniffio structlog typing_extensions
+  typing_inspection urllib3 virtualenv wandb xxhash yaml'.split() %}
+{# The project's own `tests/` and the interpreter's `test` package. #}
+{% set reserved = ['test', 'tests'] %}
+{% set vague = 'common core helpers misc util utils'.split() %}
+
+{#
+  Each macro gives the reason `name` is refused, or nothing. Copier prints the reason after up to
+  46 characters of its own and cuts the line off at the terminal's width, so a reason is short.
+  A project that exists keeps a name only style speaks against: `copier update` must not stop
+  on it.
+#}
+{% macro project_refusal(name, existing=false) %}
+{% if not (name | regex_search('^[a-z]([a-z0-9-]*[a-z0-9])?$')) %}
+use kebab-case, like my-project
+{% elif name | replace('-', '_') in installed %}
+a dependency's name; pick another
+{% elif not existing and name | length > 50 %}
+use at most 50 characters
+{% endif %}
+{% endmacro %}
+
+{# 27 characters keep every generated line within 88 columns, as 50 do for the project's name. #}
+{% macro package_refusal(name, existing=false) %}
+{% if not (name | regex_search('^[a-z][a-z0-9_]*$')) %}
+use snake_case, like my_project
+{% elif name in keywords %}
+a Python keyword; pick another name
+{% elif name in stdlib or name in installed or name in reserved %}
+hides a module; pick another name
+{% elif not existing and name | length > 27 %}
+use at most 27 characters
+{% elif not existing and name in vague %}
+too vague (LAY-2); name what it does
+{% endif %}
+{% endmacro %}
