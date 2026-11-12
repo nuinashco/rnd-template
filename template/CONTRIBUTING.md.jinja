@@ -102,7 +102,7 @@ configs/                  Hydra YAML; generated files say so in their first line
 {% if example %}
   signal/<kind>.yaml      each signal kind with its defaults, selected by signal=<kind> (generated)
 {% endif %}
-  hydra/default.yaml      Hydra writes nothing; the app writes runs/
+  hydra/default.yaml      a run gets no Hydra files; the app writes runs/
 src/{{ package }}/
   cli/                    one module per console script: the composition roots
   config.py               entry config schemas + GENERATED (files `make configs` writes)
