@@ -203,6 +203,9 @@ so they see every family even before any code uses it.
 | an item | `src/{{ package }}/<family>/items/<kind>.py` | `make configs` |
 | an entry config | a schema in `config.py` listed in `GENERATED` as `defaults/<command>.yaml`, and `configs/<command>.yaml` composing it | a `cli/<command>.py` and a console script |
 | a setting | a field with a default on the schema, described only if its name leaves something open (DOC-7) | `make configs` |
+
+`make configs` writes files and never removes one: after renaming or removing a kind, delete its
+`configs/<group>/<kind>.yaml`.
 {% if example %}
 
 ## Removing the example

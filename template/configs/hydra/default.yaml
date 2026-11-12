@@ -1,7 +1,8 @@
 # Hydra's own settings: a run gets no Hydra files; the app creates runs/<run_name>/ itself.
-# A sweep (`-m`) still writes its multirun.yaml: under multirun/ at the project root,
-# wherever the command starts, and git ignores that folder. The file holds the overrides as
-# typed, one more reason to keep secrets in the environment (CFG-6).
+# A sweep (`-m`) still writes its multirun.yaml and an empty folder per job: under
+# multirun/ at the project root, wherever the command starts, and git ignores that folder.
+# The multirun.yaml holds the overrides as typed, one more reason to keep secrets in the
+# environment (CFG-6).
 defaults:
   - override hydra_logging: disabled
   - override job_logging: disabled
