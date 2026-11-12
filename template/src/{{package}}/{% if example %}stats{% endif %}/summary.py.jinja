@@ -1,0 +1,31 @@
+"""Summary statistics of one sample, computed without side effects."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import numpy as np
+from attrs import frozen
+from numpy.typing import NDArray
+
+
+@frozen
+class Summary:
+    """Size, centre, spread and range of one sample."""
+
+    count: int
+    mean: float
+    std: float
+    minimum: float
+    maximum: float
+
+
+def summarize(values: NDArray[np.float64]) -> Summary:
+    """Return the summary of a non-empty sample; `std` is the population one."""
+    return Summary(
+        count=values.size,
+        mean=float(values.mean()),
+        std=float(values.std()),
+        minimum=float(values.min()),
+        maximum=float(values.max()),
+    )

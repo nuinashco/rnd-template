@@ -1,0 +1,9 @@
+"""`signal` kinds, one module each; importing this package registers them all."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+from nuikit.registry import import_submodules
+
+import_submodules(__name__)

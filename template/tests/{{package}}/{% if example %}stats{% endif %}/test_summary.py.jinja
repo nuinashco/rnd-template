@@ -1,0 +1,21 @@
+"""Summaries report a sample's size, centre, spread and range."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import numpy as np
+
+from {{ package }}.stats import summary
+
+
+def test_summary_of_constant_sample_has_no_spread():
+    result = summary.summarize(np.full(4, 3.0))
+
+    assert (result.count, result.mean, result.std) == (4, 3.0, 0.0)
+
+
+def test_summary_spans_smallest_to_largest_value():
+    result = summary.summarize(np.array([2.0, -1.0, 5.0]))
+
+    assert (result.minimum, result.maximum) == (-1.0, 5.0)

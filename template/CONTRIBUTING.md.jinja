@@ -1,0 +1,237 @@
+# Contributing
+
+How {{ project_name }} is built and how to change it. Using it: [README.md](README.md).
+
+The rules it follows, each with its reason and its check, live in three places:
+
+- [nuinashco/conventions](https://github.com/nuinashco/conventions/blob/main/GUIDE.md): the rules for every Python
+  repo (LAY, ARC, TYP, STY, DOC, ERR, LOG, TST, RDOC, GIT and TOOL, except the IDs below). The `conventions` Claude
+  Code plugin carries them as skills, with the `conventions-reviewer` and `descriptions-judge` subagents.
+- [nuinashco/nuikit](https://github.com/nuinashco/nuikit/blob/main/docs/guide.md): the rules of the library this
+  project builds on (FAM, CFG, ERR-1, ERR-2, LOG-1, LOG-3, RUN-1, RUN-2), carried by the `nuikit` plugin's skills.
+- [.claude/rules/](.claude/rules/): the rules of [nuinashco/rnd-template](https://github.com/nuinashco/rnd-template),
+  which made this project (LAY-4, LAY-7, ENV-1 to ENV-3, TST-5, RUN-3 to RUN-7, TOOL-3); `copier update` refreshes
+  them.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph project["{{ package }}"]
+        cli["cli/<br/>one module per console script"]:::side
+        config["config.py<br/>entry config schemas"]:::pure
+{% if example %}
+        signals["signals/<br/>family: sources of sample values"]:::pure
+        summary["stats/summary.py<br/>summary statistics"]:::pure
+        report["stats/report.py<br/>writes summary.json"]:::side
+{% endif %}
+        paths["paths.py<br/>repository paths"]:::side
+{% if example %}
+        cli --> config --> signals
+        cli --> report --> summary
+        cli --> summary
+        cli --> paths
+{% else %}
+        cli --> config --> paths
+{% endif %}
+    end
+    nuikit["nuikit<br/>config, configgen, registry, errors,<br/>logging, runs, seeding"]:::kit
+    project --> nuikit
+    pure["teal: decides, same input same output"]:::pure
+    side["rust: acts on files, processes, network"]:::side
+    kit["grey: the nuikit library, a dependency"]:::kit
+    classDef pure fill:#d9f2ec,stroke:#1b7f6b,color:#0b3d33
+    classDef side fill:#f8e3d8,stroke:#b4532a,color:#4a1f0c
+    classDef kit fill:#ececec,stroke:#6b6b6b,color:#262626
+```
+
+`{{ package }}` holds this project's code and nothing else. Each seam keeps the two colours apart, so a dry run can
+execute the pure half for real.
+{% if example %}
+`stats` shows the split: `summary.py` computes, `report.py` writes.
+{% endif %}
+
+`nuikit` is the library every project from the template builds on: what schemas and families extend, and what an
+entry point sets up before it runs. `[tool.uv.sources]` pins its release tag; `copier update` moves the pin when the
+template moves to a new release, and fixes go to [nuinashco/nuikit](https://github.com/nuinashco/nuikit).
+
+## Import layers
+
+{% if example %}
+Dependencies point down: `cli` > `config` > `signals | stats` > `paths`. Siblings joined by `|` never import each
+other, and any layer may import `nuikit`.
+{% else %}
+Dependencies point down: `cli` > `config` > `paths`, and any layer may import `nuikit`.
+{% endif %}
+The import-linter contract in `pyproject.toml` enforces the order. It is exhaustive, so a new subpackage fails
+`make check` until it is placed in `layers`: a domain goes between `config` and `paths`, as a sibling of the domains
+it doesn't import or in a layer above them. A standalone subpackage (a proxy, a client) also gets a `forbidden`
+contract that keeps it from importing the rest of the package except `paths` (ARC-1).
+
+## Main run
+
+```mermaid
+sequenceDiagram
+    participant run as cli/run.py
+    participant nuikit
+{% if example %}
+    participant signals
+    participant stats
+{% endif %}
+    run->>nuikit: MainConfig.from_hydra(cfg) validates the composed config
+    run->>nuikit: configure_logging, then seed_everything returns rng
+{% if example %}
+    run->>signals: SignalFactory.from_config(cfg.signal) builds the kind
+{% endif %}
+    run->>nuikit: start_run writes config.yaml and run.json into runs/run_name/
+{% if example %}
+    run->>signals: signal.sample(cfg.samples, rng=rng)
+    run->>stats: summary.summarize(values)
+    run->>stats: report.write(result, run_dir) writes summary.json
+{% endif %}
+```
+
+## Repository layout
+
+```text
+configs/                  Hydra YAML; generated files say so in their first line
+  run.yaml                entry config of {{ cli }}-run: picks groups, holds this repo's choices
+  defaults/run.yaml       every MainConfig setting with its default (generated)
+{% if example %}
+  signal/<kind>.yaml      each signal kind with its defaults, selected by signal=<kind> (generated)
+{% endif %}
+  hydra/default.yaml      Hydra writes nothing; the app writes runs/
+src/{{ package }}/
+  cli/                    one module per console script: the composition roots
+  config.py               entry config schemas + GENERATED (files `make configs` writes)
+{% if example %}
+  signals/                example family: base.py, one module per kind in items/
+  stats/                  example domain: summary.py decides, report.py writes
+{% endif %}
+  paths.py                repository paths, from the .project-root marker
+tests/                    mirrors src/ module by module
+  test_invariants.py      configs compose and are fresh, kinds build, import layers hold
+  integration/            end to end, `-m integration`
+scripts/                  exploratory or one-time runnables, never imported; rerun ones become cli/ commands
+notebooks/                exploration only, outputs stripped; reference/ for third-party notebooks
+.claude/                  settings.json enables the plugins; rules/ holds the template's rules
+runs/ data/               gitignored
+```
+
+## Families
+
+A family is a concept with several implementations chosen by a config `kind`. The `nuikit` plugin's `add-family` and
+`add-family-item` skills walk through adding one.
+
+{% if example %}
+```text
+src/{{ package }}/signals/
+  base.py        Signal (attrs ABC), SignalConfig, SignalFactory (config_group = "signal")
+  items/
+    __init__.py  import_submodules(__name__)
+    constant.py  @SignalFactory.register("constant") above @define
+    gaussian.py  @SignalFactory.register("gaussian") above @define
+```
+
+```python
+class GaussianSignalConfig(SignalConfig):
+    """Settings of the `gaussian` signal."""
+
+    mean: float = 0.0
+    std: PositiveFloat = 1.0
+
+
+@SignalFactory.register("gaussian")  # Outermost: attrs replaces the class below it.
+@define
+class GaussianSignal(Signal[GaussianSignalConfig]):  # The type argument binds Config.
+    """Signal of independent normal draws."""
+
+    def sample(self, n: int, *, rng: np.random.Generator) -> NDArray[np.float64]:
+        return rng.normal(self.config.mean, self.config.std, size=n)
+```
+
+`SignalFactory.from_config({"kind": "gaussian", "std": 2})` validates against `GaussianSignalConfig` and builds the
+item; `make configs` writes `configs/signal/gaussian.yaml`, the file `signal=gaussian` selects. `MainConfig.signal`
+resolves its kind through `SignalFactory.validate`, so a wrong kind (`signal.kind=gausian`, or `kind:` in a preset)
+fails with exit code 2 and lists the registered kinds; `signal=gausian` fails earlier, in Hydra, which lists the files
+in `configs/signal/`. The family's `__init__.py` imports `items`, so importing the family registers its kinds;
+`make configs` and the invariant tests import the whole package, so they see every family even before any code uses
+it.
+{% else %}
+```text
+src/{{ package }}/<family>/
+  base.py        <Family> (attrs ABC), <Family>Config, <Family>Factory (config_group = "<family>")
+  items/
+    __init__.py  import_submodules(__name__)
+    <kind>.py    @<Family>Factory.register("<kind>") above @define
+```
+
+```python
+class SquareConfig(ShapeConfig):
+    """Square settings."""
+
+    side_m: float = Field(default=1.0, gt=0)
+
+
+@ShapeFactory.register("square")  # Outermost: attrs replaces the class.
+@define
+class Square(Shape[SquareConfig]):  # The type argument binds Square.Config.
+    """Axis-aligned square."""
+
+    def area(self) -> float:
+        return self.config.side_m**2
+```
+
+`ShapeFactory.from_config({"kind": "square", "side_m": 2})` validates against `SquareConfig` and builds the item;
+`make configs` writes `configs/shape/square.yaml`, the file `shape=square` selects. The family's `__init__.py` imports
+`items`, so importing the family registers its kinds; `make configs` and the invariant tests import the whole package,
+so they see every family even before any code uses it.
+{% endif %}
+
+## Extending
+
+| to add | create | and |
+|---|---|---|
+| a family | `src/{{ package }}/<family>/base.py` + `items/` | place it in the import-linter `layers`; `make configs` |
+{% if example %}
+| a signal | `src/{{ package }}/signals/items/<kind>.py` | `make configs`; select it with `signal=<kind>` |
+{% endif %}
+| an item | `src/{{ package }}/<family>/items/<kind>.py` | `make configs` |
+| an entry config | a schema in `config.py` listed in `GENERATED` as `defaults/<command>.yaml`, and `configs/<command>.yaml` composing it | a `cli/<command>.py` and a console script |
+| a setting | a field with a default on the schema, described only if its name leaves something open (DOC-7) | `make configs` |
+{% if example %}
+
+## Removing the example
+
+Once the first real family exists, drop `signals` and `stats` from a clean working tree:
+
+```bash
+uvx copier update --trust --defaults --data example=false
+```
+
+Copier deletes the example's files and takes its lines out of `config.py`, `cli/run.py`, `configs/run.yaml`, the
+import layers and these docs. It marks conflicts inline, between `<<<<<<< before updating` and
+`>>>>>>> after updating`; resolve them, then run `make configs` and `make check`.
+{% endif %}
+
+## Tests
+
+```bash
+make test               # unit tests, a few seconds
+make test-integration   # end to end, behind the integration marker
+```
+
+Fakes, not mocks (`unittest.mock` is banned by ruff). Each case covers a distinct behaviour; child processes and
+servers only for what cannot be measured in process.
+
+## Commits
+
+Conventional Commits with the standard types (`feat fix docs refactor test build ci perf style chore revert`), an
+optional scope, a lowercase imperative subject: one line, no articles, no body or trailers. Short-lived `<type>/<slug>`
+branches, squash-merged. The commit-msg hooks check all of it. PR descriptions follow
+`.github/pull_request_template.md`; `make github`, run once per repo, makes the squash commit the PR title alone.
+
+## Deviations
+
+None yet. A rule this repo can't follow yet goes here, with the reason. A rule that does not apply to it at all also
+goes in `ignore` of the `[tool.conventions]` table in `pyproject.toml`, so the hooks skip it.

@@ -1,0 +1,26 @@
+"""`gaussian` signal: draws follow its mean and spread, and repeat with the seed."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import numpy as np
+
+from {{ package }}.signals.base import SignalFactory
+
+
+def test_gaussian_signal_centres_on_its_mean_with_its_spread():
+    signal = SignalFactory.from_config({"kind": "gaussian", "mean": 5.0, "std": 0.5})
+
+    values = signal.sample(10_000, rng=np.random.default_rng(0))
+
+    assert (round(values.mean(), 1), round(values.std(), 1)) == (5.0, 0.5)
+
+
+def test_gaussian_signal_repeats_its_draws_from_same_seed():
+    signal = SignalFactory.from_config({"kind": "gaussian"})
+
+    first = signal.sample(5, rng=np.random.default_rng(7))
+    second = signal.sample(5, rng=np.random.default_rng(7))
+
+    assert first.tolist() == second.tolist()

@@ -1,0 +1,9 @@
+# Entry config of `{{ cli }}-run`: values set below change every run of this repo.
+# Every setting with its default: defaults/run.yaml (generated).
+defaults:
+  - defaults/run@_here_
+{% if example %}
+  - signal: gaussian
+{% endif %}
+  - hydra: default
+  - _self_

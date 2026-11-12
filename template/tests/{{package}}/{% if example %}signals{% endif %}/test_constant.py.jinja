@@ -1,0 +1,17 @@
+"""`constant` signal: every value is the configured one."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import numpy as np
+
+from {{ package }}.signals.base import SignalFactory
+
+
+def test_constant_signal_repeats_its_value():
+    signal = SignalFactory.from_config({"kind": "constant", "value": 2.5})
+
+    values = signal.sample(3, rng=np.random.default_rng(0))
+
+    assert values.tolist() == [2.5, 2.5, 2.5]

@@ -1,0 +1,26 @@
+"""`constant` signal: one value repeated, a baseline without randomness."""
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+import numpy as np
+from attrs import define
+from numpy.typing import NDArray
+
+from {{ package }}.signals.base import Signal, SignalConfig, SignalFactory
+
+
+class ConstantSignalConfig(SignalConfig):
+    """Settings of the `constant` signal."""
+
+    value: float = 0.0
+
+
+@SignalFactory.register("constant")  # Outermost: attrs replaces the class below it.
+@define
+class ConstantSignal(Signal[ConstantSignalConfig]):
+    """Signal that repeats one value."""
+
+    def sample(self, n: int, *, rng: np.random.Generator) -> NDArray[np.float64]:
+        return np.full(n, self.config.value)

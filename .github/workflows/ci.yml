@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: rnd-template
+      # Generated projects install nuikit and conventions-hooks from these checkouts.
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: nuinashco/nuikit
+          ref: main
+          path: nuikit
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: nuinashco/conventions
+          ref: main
+          path: conventions
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: uv sync --locked
+        working-directory: rnd-template
+      - run: make lint test
+        working-directory: rnd-template
+        env:
+          NUIKIT_PATH: ${{ github.workspace }}/nuikit
+          CONVENTIONS_PATH: ${{ github.workspace }}/conventions

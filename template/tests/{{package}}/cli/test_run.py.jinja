@@ -1,0 +1,41 @@
+{% if example %}
+"""`{{ cli }}-run` summarizes its signal into the run directory."""
+{% else %}
+"""`{{ cli }}-run` records its config in the run directory."""
+{% endif %}
+
+{% if legacy_python %}
+from __future__ import annotations
+
+{% endif %}
+{% if example %}
+import json
+
+{% endif %}
+from hydra import compose, initialize_config_dir
+
+from {{ package }} import paths
+from {{ package }}.cli import run
+
+
+{% if example %}
+def test_run_writes_summary_of_configured_signal(tmp_path, monkeypatch):
+    monkeypatch.setattr(paths, "RUNS_DIR", tmp_path)
+    overrides = ["run_name=t", "signal=constant", "signal.value=2.5", "samples=4"]
+    with initialize_config_dir(str(paths.CONFIGS_DIR)):
+        cfg = compose(config_name="run", overrides=overrides)
+
+    run.main(cfg)
+
+    summary = json.loads((tmp_path / "t" / "summary.json").read_text(encoding="utf-8"))
+    assert (summary["count"], summary["mean"], summary["std"]) == (4, 2.5, 0.0)
+{% else %}
+def test_run_records_its_config_in_the_run_directory(tmp_path, monkeypatch):
+    monkeypatch.setattr(paths, "RUNS_DIR", tmp_path)
+    with initialize_config_dir(str(paths.CONFIGS_DIR)):
+        cfg = compose(config_name="run", overrides=["run_name=t"])
+
+    run.main(cfg)
+
+    assert (tmp_path / "t" / "config.yaml").is_file()
+{% endif %}
