@@ -52,17 +52,19 @@ The tests render the three variants and, in each project, run `make check`, the 
 start a project from the real `v0.3.4` release and update it to the working tree: the copies go, `make check` passes,
 and a `uni` or `lab` project is refused untouched. That needs the release tags, so fetch them (`git fetch --tags`).
 
-Each project installs nuikit and conventions-hooks at the releases `copier.yml` pins, which is what a user gets and
-what CI runs. To test against checkouts instead, as they are on disk:
+Each project installs nuikit and conventions-hooks at the releases `copier.yml` pins, which is what a user gets. To
+test against checkouts instead, as they are on disk:
 
 ```bash
 NUIKIT_PATH=~/src/nuikit CONVENTIONS_PATH=~/src/conventions make lint test
 ```
 
+CI checks out both repos at `main` and tests against those.
+
 ## Release
 
 1. To take a new nuikit or conventions release, move its tag in `copier.yml`, and the conventions tag in the
-   `Makefile` with it. The release must exist first: CI installs it.
+   `Makefile` with it. The release must exist first: projects install it.
 2. Merge, then tag `main` once CI passes: `git tag v1.0.1 && git push origin v1.0.1`. Projects take it with
    `copier update`. A release that adds a migration gets the version the migration names.
 
