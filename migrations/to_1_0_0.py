@@ -45,7 +45,11 @@ def before(answers_file: str, release: str) -> None:
     profile = answers.get("profile", "rnd")
     if profile != "rnd":
         sys.exit(REFUSAL.format(profile=profile))
-    present = [str(path) for path in copies(answers, release) if path.exists()]
+    present = [
+        str(path)
+        for path in copies(answers, release)
+        if path.exists() or path.is_symlink()
+    ]
     if present:
         print(NOTICE.format(copies=", ".join(present)))
 
@@ -94,8 +98,8 @@ def clear(folder: Path) -> None:
 def ignored(folder: Path) -> set[Path]:
     """Return the files in `folder` that git ignores, bytecode caches aside.
 
-    Git has no copy of an ignored file, so nothing could bring it back. It names a
-    nested repository by its folder.
+    Git has no copy of an ignored file, so nothing could bring it back. Git names a
+    nested repository it ignores by its folder, not file by file.
     """
     command = ("git", "ls-files", "--others", "--ignored", "--exclude-standard", "-z")
     listed = subprocess.run(

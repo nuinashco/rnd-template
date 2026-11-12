@@ -822,6 +822,7 @@ def test_update_unlinks_copy_that_is_symlink_and_leaves_its_target_alone(
     project = render(history, tmp_path / "old", vcs_ref=OLD_RELEASE, profile="rnd")
     shutil.rmtree(project / "src" / "nuikit")
     (project / "src" / "nuikit").symlink_to(target)
+    (project / "tests" / "nuikit" / "linked").symlink_to(target)
     commit(project, "chore: start project")
 
     update(project, trust=True)
@@ -831,6 +832,25 @@ def test_update_unlinks_copy_that_is_symlink_and_leaves_its_target_alone(
     assert (target / "wip.py").read_text(encoding="utf-8") == (
         '"""Work in progress."""\n'
     )
+
+
+def test_update_names_copy_that_is_broken_symlink_before_it_goes(
+    history, tmp_path, capfd
+):
+    project = render(history, tmp_path / "old", vcs_ref=OLD_RELEASE, profile="rnd")
+    (project / "CONVENTIONS.md").unlink()
+    (project / "CONVENTIONS.md").symlink_to(tmp_path / "nowhere")
+    commit(project, "chore: start project")
+
+    update(project, trust=True)
+
+    notice = next(
+        line
+        for line in capfd.readouterr().out.splitlines()
+        if line.startswith("1.0.0 removes")
+    )
+    assert "CONVENTIONS.md" in notice
+    assert not (project / "CONVENTIONS.md").exists(follow_symlinks=False)
 
 
 def test_update_from_first_release_removes_core_copies_of_project_that_ran(
