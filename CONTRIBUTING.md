@@ -55,12 +55,12 @@ make test
 ```
 
 `make lint` runs ruff, `check-comments` and `check-conventions` on `tests/` and `migrations/`. `make test` takes
-about a minute and needs network. The tests render the three variants and, in each project, run `make check`, the run command and
-`<cli>-configs --check`, then check the Claude settings, the protected files and the shape of the rules. They also
-render a project from the `v0.3.4` and `v0.1.0` tags of a local clone and update it to the working tree: the copies
-go, `make check` passes, and a `uni` or `lab` project is refused untouched. That needs the release tags, so fetch
-them (`git fetch --tags`). Such a project names its `conventions-hooks` source as a local path; one test rewrites
-the line to what a project made on GitHub carries.
+about two minutes and needs network. The tests render the three variants and, in each project, run `make check`, the
+run command and `<cli>-configs --check`, then check the Claude settings, the protected files and the shape of the
+rules. They also render projects from the `v0.3.4` and `v0.1.0` tags of a local clone and update them to the working
+tree: the copies go, a `uni` or `lab` project is refused untouched, and `make check` passes in a project updated from
+`v0.3.4`. That needs the release tags, so fetch them (`git fetch --tags`). Such a project names its
+`conventions-hooks` source as a local path; one test rewrites the line to what a project made on GitHub carries.
 
 Each project installs nuikit and conventions-hooks at the releases `copier.yml` pins, which is what a user gets. To
 test against checkouts instead, as they are on disk:

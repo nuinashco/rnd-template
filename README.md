@@ -22,7 +22,9 @@ make check
 Copier asks for the project name (the folder's name by default), the import package, a description, the author, the
 minimum Python (3.14 by default), whether runs can mirror to Weights & Biases, and whether to include the example.
 `--defaults` accepts every default, the template author's name among them, so pass yours with it:
-`-d author_name=... -d author_email=...`. `make setup` installs the dependencies and the git hooks; `make check`
+`-d author_name=... -d author_email=...`. Under `--defaults` the folder's name must be one the template accepts
+(kebab-case, not a dependency's or a module's name); otherwise copier stops with the reason at the end of a
+traceback, so pass `-d project_name=...`. `make setup` installs the dependencies and the git hooks; `make check`
 runs what CI runs: ruff, the conventions checks, the import layers, pyright and pytest. Commit everything it
 leaves, `uv.lock` included: CI installs from it.
 
@@ -68,12 +70,13 @@ A project remembers the template release it came from in `.copier-answers.yml`. 
 from the project root with a clean working tree:
 
 ```bash
-uvx copier update
+uvx copier update --defaults
 ```
 
-Copier merges the template's changes with yours and marks conflicts inline, between `<<<<<<< before updating` and
-`>>>>>>> after updating`. Afterwards run `uv sync` and `make check`. A release that brings a migration, a script
-that changes the project, needs `uvx copier update --trust`: without it copier stops and says so.
+`--defaults` keeps the answers recorded in that file instead of asking again. Copier merges the template's changes
+with yours and marks conflicts inline, between `<<<<<<< before updating` and `>>>>>>> after updating`. Afterwards
+run `uv sync` and `make check`. A release that brings a migration, a script that changes the project, needs
+`uvx copier update --defaults --trust`: without it copier stops and says so.
 
 A project made from a release before 1.0.0 needs two edits first, and the update removes what those releases
 copied into it: [UPGRADING.md](UPGRADING.md) has the steps.

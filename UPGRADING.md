@@ -18,11 +18,12 @@ project only, so such a project stays on its release, and the update below stops
 ## 2. Update
 
 ```bash
-uvx copier update --trust
+uvx copier update --defaults --trust
 ```
 
-`--trust` lets the migration of 1.0.0 run. If the `pyproject.toml` line was left as it was, the update marks one
-conflict under `[tool.uv.sources]`: keep the "after updating" side. Then run `uv sync` and `make check`.
+`--defaults` keeps the recorded answers instead of asking again, and `--trust` lets the migration of 1.0.0 run. If
+the `pyproject.toml` line was left as it was, the update marks one conflict under `[tool.uv.sources]`: keep the
+"after updating" side. Then run `uv sync` and `make check`.
 
 ## What changes
 
@@ -32,9 +33,12 @@ conflict under `[tool.uv.sources]`: keep the "after updating" side. Then run `uv
   into your own package. Files git ignores in those folders stay, and the update names them.
 - **A project from v0.1.0** holds its copy as `src/<package>/core/`, with its tests in `tests/<package>/core/`:
   both go as well. Imports of `<package>.core` become imports of `nuikit`, except `<package>.core.paths`, which is
-  `<package>.paths` now.
+  `<package>.paths` now. `<Package>Error` is `nuikit.errors.UserError`, and `start_run` takes
+  `runs_dir=<package>.paths.RUNS_DIR` (and `repo=<package>.paths.ROOT`) explicitly.
 - **`data`, `runs`, `outputs`, `multirun`, `build` and `dist` are ignored at the top level only.** A folder of that
   name under `src/` or `tests/` shows up in `git status` after the update: commit it, or ignore it yourself.
+- **ruff checks two more things:** every signature in `src/` is annotated (ANN, TYP-1) and a `# noqa` names its rule
+  (PGH004); `make check` lists what to fix.
 - **No example is added** to a project that already exists.
 - **The project keeps its names.** A package name that a new project could not take, because it is longer than 27
   characters or as vague as `utils`, stays as it is.

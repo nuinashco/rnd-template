@@ -55,7 +55,9 @@ module-name = "{{ package }}"
 [tool.ruff]
 line-length = 88
 src = ["src", "tests"]
-extend-exclude = ["*.ipynb"]  # Notebooks are for exploration; nbstripout checks them (RUN-5).
+# Notebooks are for exploration; nbstripout strips those outside
+# notebooks/reference/ (RUN-5).
+extend-exclude = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = [

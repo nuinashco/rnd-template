@@ -129,6 +129,7 @@ REWRITING = ("end-of-file-fixer", "trailing-whitespace", "nbstripout")
 HEADING = re.compile(r"^### ([A-Z]+-\d+) (?:MUST|SHOULD|MAY)(?: \[rnd\])?$", re.M)
 BASH_BLOCK = re.compile(r"^ *```bash\n(.*?)^ *```$", re.M | re.S)
 INSTALLS = ["/plugin install conventions@nuinashco", "/plugin install nuikit@nuinashco"]
+COLOUR = re.compile(r"\x1b\[[0-9;]*m")
 
 
 @pytest.fixture(scope="module")
@@ -407,6 +408,26 @@ def test_check_protected_refuses_generated_files_only(project, variant):
     assert listed == generated, result.stdout + result.stderr
 
 
+def test_refused_commit_message_lists_types_hook_accepts(project, tmp_path):
+    message = tmp_path / "COMMIT_EDITMSG"
+    message.write_text("Added project skeleton\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            *("uv", "run", "pre-commit", "run", "conventional-pre-commit"),
+            *("--hook-stage", "commit-msg", "--commit-msg-filename", str(message)),
+        ],
+        cwd=project,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode != 0
+    types = "build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test"
+    assert types in COLOUR.sub("", result.stdout), result.stdout + result.stderr
+
+
 def test_claude_settings_enable_plugins_and_leave_hooks_to_them(rendered):
     settings = json.loads((rendered / ".claude" / "settings.json").read_text())
 
@@ -443,11 +464,17 @@ def test_template_rules_are_path_scoped_and_shaped_as_rules(rendered):
 
 
 def test_gitignore_ignores_top_level_folders_and_keeps_packages_named_like_them(
-    rendered,
+    rendered, variant
 ):
     # `data` and `runs` alone are what git sees of a symlink to another disk.
     paths = ["data/raw.csv", "runs/first/run.json", "dist/demo.whl", "data", "runs"]
-    packages = ["src/demo/data/loaders.py", "tests/demo/runs/test_latest.py"]
+    if variant.get("use_wandb"):
+        paths.append("wandb/settings")  # What `uv run wandb offline` writes.
+    packages = [
+        "src/demo/data/loaders.py",
+        "tests/demo/runs/test_latest.py",
+        "src/demo/wandb/client.py",
+    ]
 
     ignored = sh(rendered, "git", "check-ignore", *paths, *packages).split()
 

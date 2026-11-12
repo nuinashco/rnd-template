@@ -27,7 +27,7 @@ repos:
     hooks:
       - id: conventional-pre-commit
         stages: [commit-msg]
-        args: [build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test]
+        args: [--verbose, build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test]
   - repo: local
     hooks:
       # Local hooks run the versions pinned in uv.lock, the same ones `make check` uses.
@@ -64,7 +64,7 @@ repos:
         language: system
         types: [python]
       - id: check-commit-msg
-        name: commit message is one line without articles (GIT-1, GIT-2)
+        name: commit message is one short conventional line (GIT-1, GIT-2)
         entry: uv run check-commit-msg
         language: system
         stages: [commit-msg]

@@ -46,8 +46,10 @@ A sweep needs a run name that differs for each job:
 {% if use_wandb %}
 
 To mirror a run to Weights & Biases, add `tracker=wandb`. Log in once with `uv run wandb login`, or put
-`WANDB_API_KEY` in `.env`; `wandb_project` and `wandb_entity` choose where the run goes. W&B records the command
-line as typed, in its files under `runs/<run_name>/wandb/` and in the run it uploads.
+`WANDB_API_KEY` in `.env`; `wandb_project` and `wandb_entity` choose where the run goes. Without a key, a run in a
+terminal asks you to log in; any other run stops with an error after its run folder is made. `WANDB_MODE=offline` in
+`.env` keeps W&B's files under `runs/<run_name>/wandb/` for a later `uv run wandb sync`. W&B records the command line
+as typed, in those files and in the run it uploads.
 {% endif %}
 
 ## Commands

@@ -2,7 +2,7 @@
 
 How {{ project_name }} is built and how to change it. Using it: [README.md](README.md).
 
-The rules it follows, each with its reason and its check, live in three places:
+The rules it follows, each with its check and, where it needs one, its reason, live in three places:
 
 - [nuinashco/conventions](https://github.com/nuinashco/conventions/blob/main/GUIDE.md): the rules for every Python
   repo (LAY, ARC, TYP, STY, DOC, ERR, LOG, TST, RDOC, GIT and TOOL, except the IDs below). The `conventions` Claude
@@ -219,7 +219,9 @@ uvx copier update --defaults --data example=false
 Copier deletes the example's files and takes its lines out of `config.py`, `cli/run.py`, `configs/run.yaml`, the
 import layers and these docs. It marks conflicts inline, between `<<<<<<< before updating` and
 `>>>>>>> after updating`: resolve them. The update also takes out the imports the example used: put back the ones
-your own code still needs, which `make lint` lists as F821. Then run `make configs` and `make check`.
+your own code still needs, which `make lint` lists as F821. Kinds, tests and presets you added under
+`src/{{ package }}/signals/`, `tests/{{ package }}/signals/` or `configs/signal/` stay:
+delete them, or move them into your own family. Then run `make configs` and `make check`.
 {% endif %}
 
 ## Tests
@@ -238,10 +240,10 @@ child processes and servers only for what cannot be measured in process.
 Conventional Commits with the standard types (`feat fix docs refactor test build ci perf style chore revert`), an
 optional scope, a lowercase imperative subject: one line, no articles, no body or trailers. Short-lived `<type>/<slug>`
 branches, squash-merged. The commit-msg hooks check the type, the single line, its length, the lowercase start, the
-final period and the articles; they expect git's default comment character `#`, so with another
-`core.commentChar` a commit written in an editor is refused. PR descriptions follow
-`.github/pull_request_template.md`; `make github`, run once per repo with the `gh` CLI, makes the squash commit the
-PR title alone.
+final period and the articles. In an editor, write the subject on the first line: `conventional-pre-commit` refuses
+one below git's comment lines and, where `core.commentChar` sets a comment character other than `#`, also one with no
+blank line below it. PR descriptions follow `.github/pull_request_template.md`; `make github`, run once per repo with
+the `gh` CLI, makes the squash commit the PR title alone.
 
 ## Deviations
 
