@@ -10,9 +10,13 @@ log_level: "info"  # debug|info|warning|error
 log_format: "auto"  # auto|console|json; auto: console in a terminal, JSON otherwise
 {% if use_wandb %}
 tracker: null  # wandb: mirror the run to W&B; null: run dir only
-wandb_project: "{{ project_name }}"
-wandb_entity: null  # null: your default entity
+wandb:
+  project: "{{ project_name }}"
+  entity: null  # null: your default entity
 {% endif %}
 {% if example %}
+{% if use_wandb %}
+
+{% endif %}
 samples: 100
 {% endif %}
