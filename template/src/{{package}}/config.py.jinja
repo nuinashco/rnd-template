@@ -33,6 +33,15 @@ from {{ package }}.signals.base import SignalConfig, SignalFactory
 {% endif %}
 
 
+{% if use_wandb %}
+class WandbConfig(Schema):
+    """Where a run that `tracker=wandb` mirrors to W&B goes."""
+
+    project: str = "{{ project_name }}"
+    entity: str | None = Field(default=None, description="null: your default entity")
+
+
+{% endif %}
 class MainConfig(Schema):
     """Entry config of `{{ cli }}-run` (configs/run.yaml)."""
 
@@ -52,10 +61,7 @@ class MainConfig(Schema):
     tracker: Literal["wandb"] | None = Field(
         default=None, description="wandb: mirror the run to W&B; null: run dir only"
     )
-    wandb_project: str = "{{ project_name }}"
-    wandb_entity: str | None = Field(
-        default=None, description="null: your default entity"
-    )
+    wandb: WandbConfig = WandbConfig()
 {% endif %}
 {% if example %}
     samples: PositiveInt = 100

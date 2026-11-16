@@ -63,7 +63,7 @@ def main(dict_cfg: DictConfig) -> None:
 {% if use_wandb %}
     if cfg.tracker == "wandb":
         runs.mirror_to_wandb(
-            cfg, run_dir, project=cfg.wandb_project, entity=cfg.wandb_entity
+            cfg, run_dir, project=cfg.wandb.project, entity=cfg.wandb.entity
         )
 {% endif %}
 {% if example %}
